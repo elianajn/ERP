@@ -25,6 +25,7 @@ This experiment requires Python 3 to be installed. If you do not have Python 3 p
 ***Note**: The $ before a line which you type into the terminal is not actually typed out in the terminal. This is just to signifiy that the line is to be inputed into the termianl*
 
 ### **Downloading the Code**
+
 ### **Starting Virtual Environment**
 A virtual environment is an environment which can have modules that code needs without having those dependencies installed on your machine.
 1. Copy the full pathname of the ERP folder you downloaded
