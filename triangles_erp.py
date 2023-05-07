@@ -14,10 +14,10 @@ import pickle
 class ERP:
     def __init__(self):
         """
-        left = UP = Analog Ch 0 = A5
-        right = DOWN = Analog Ch 1 = A6
+        UP = left = A5 = Analog Channel 0
+        DOWN = right = A6 = Analog Channel 1
         """
-        self.openbcipath = '/Users/ellaneurohr/Desktop/erp/firstone.txt'
+        # self.openbcipath = '/Users/ellaneurohr/Desktop/erp/firstone.txt' #TODO: delete
         self.sample_rate = 250
         # self.data = self.read_raw_erp(self.openbcipath) # TODO: read data
         self.data = None
@@ -28,16 +28,12 @@ class ERP:
         self.up_epochs = []
         self.down_epochs = []
         self.standard_errors = None
-        """
-        UP = left = A5 = Analog Channel 0
-        DOWN = right = A6 = Analog Channel 1
-        """
 
 
     def read_bci_text_file(self):
         """ Read in the name of the text file from the user. Save name so that output csv has the same name"""
         # self.file = input("Name of the text file (ex. demo.txt): ")
-        self.file = 'triangles.txt'
+        self.file = 'demo.txt'
 
 
 
@@ -60,7 +56,9 @@ class ERP:
 
 
     def serialize(self):
-        """ Serialize the data object so you don't have to keep reading the same file in """
+        """ Serialize the data object so you don't have to keep reading the same file in. 
+        Used during testing/writing 
+        """
         pickle.dump(self.data, open('data.p', 'wb'))
 
 
@@ -363,7 +361,7 @@ class ERP:
 
 
     def main(self):
-        self.read_bci_text_file()
+        # self.read_bci_text_file()
         self.read_raw_erp()
         self.clean_raw_erp()
         # self.trim_to_video()
