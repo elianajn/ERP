@@ -37,15 +37,11 @@ This experiment requires Python 3 to be installed. If you do not have Python 3 p
 1. Click the green button that says "Code"
 2. Click download zip and extract to a location like your Desktop
 ### **Starting Virtual Environment**
-A virtual environment is an environment which can have modules that code needs without having those dependencies installed on your machine.
-1. Copy the full pathname of the ERP folder you downloaded
-   * On Mac: Right click the ERP folder, hold option, then click "Copy "[folder]" as Pathname
-   * On Windows: Hold shift and right-click the erp folder, then select "Copy as Path"
-   * On Linux: You should know how to do this if you have a Linux machine...
-2. Open the Terminal on your computer
+A virtual environment is an environment which can have modules that code needs without having those dependencies installed on your machine.  
+
+Open the Terminal on your computer. Lab computer instructions:
    ```
-   $ cd
-   $ cd [paste Pathname]
+   $ cd Desktop/ERPLab/
    $ source venv/bin/activate
    ```
    You should see (venv) appear at the far left of the command line now.
