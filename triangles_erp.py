@@ -10,6 +10,9 @@ import bootstrapped.bootstrap as bs
 import bootstrapped.stats_functions as bs_stats
 import os
 import pickle
+from datetime import date
+import datetime # TODO: this could be cleaner
+import shutil
 
 class ERP:
     def __init__(self):
@@ -22,7 +25,7 @@ class ERP:
         # self.data = self.read_raw_erp(self.openbcipath) # TODO: read data
         self.data = None
         self.fig = None
-        self.file = None
+        self.file = 'test1.txt'
         self.up_peaks = None
         self.down_peaks = None
         self.up_epochs = []
@@ -32,8 +35,7 @@ class ERP:
 
     def read_bci_text_file(self):
         """ Read in the name of the text file from the user. Save name so that output csv has the same name"""
-        # self.file = input("Name of the text file (ex. demo.txt): ")
-        self.file = 'demo.txt'
+        self.file = input("Name of the text file (ex. demo.txt): ")
 
 
 
@@ -53,6 +55,10 @@ class ERP:
         new_names = {'EXG Channel 0':'ch1', 'EXG Channel 1':'ch2', 'EXG Channel 2':'ch3', 'EXG Channel 3':'ch4', 'EXG Channel 4':'ch5', 'EXG Channel 5':'ch6', 'EXG Channel 6':'ch7', 'EXG Channel 7':'ch8', 'Analog Channel 0':'A5', 'Analog Channel 1':'A6', 'Timestamp':'TimeStamp'}
         data = data.rename(columns=new_names)
         self.data = data
+        Timestamps = (self.data['TimeStamp'].to_numpy() - self.data['TimeStamp'].to_numpy()[0])
+        total = str(datetime.timedelta(seconds = Timestamps[-1]))
+        total = total[total.find(':')+1:]
+        return 'Input file loaded\nTotal length of recording: {}\n'.format(total)
 
 
     def serialize(self):
@@ -68,35 +74,10 @@ class ERP:
             if val == 0:
                 self.data = self.data.drop(index=range(0, i+1))
                 self.data = self.data.reset_index(drop=True)
-                return
+                return 'Header lines removed\n'
         
-
-
+        
     def trim_to_video(self):
-        """ Trim data down to revelant timeframe 
-        Finds the first occurence of the minimum value, which means the screen is on the black of the video. Trim everything before this out so
-        peak finding isn't muddled by other light on the screen.
-        Reset indices after trim
-        TODO: delete??
-        """
-        a5 = self.data['A5']
-        a6 = self.data['A6']
-        common_min = min(set(a5) & set(a6))
-
-        # Filter channels so that they only contain the minimum value but retain index values 
-        a5 = a5[a5==common_min]
-        a6 = a6[a6==common_min]
-        a5.name='a5'
-        a6.name='a6'
-        
-        # Join filtered channels so the resulting dataframe only contains indices where both were at the minimum (darkest)
-        joined = pd.merge(a5, a6, left_index=True, right_index=True, how='inner')
-        first_dark_index = joined.index[0]
-        last_dark_index = joined.index[-1]
-        self.data = self.data.loc[first_dark_index:last_dark_index]
-        self.data = self.data.reset_index(drop=True)
-        
-    def trim_to_video_2(self):
         """ Trim data down to revelant timeframe 
         Finds the first occurence of the minimum value, which means the screen is on the black of the video. Trim everything before this out so
         peak finding isn't muddled by other light on the screen.
@@ -107,7 +88,13 @@ class ERP:
         common_min = min(set(a5) & set(a6))
         uptroughs, _ = find_peaks(-a5, prominence=common_min, width=self.sample_rate*10)
         downtroughs, _ = find_peaks(-a6, prominence=common_min, width=self.sample_rate*10)
-        common = np.intersect1d(uptroughs, downtroughs)[0]
+        diff = len(uptroughs)-len(downtroughs)
+        pad_down = (0, diff) if diff > 0 else (0, 0)
+        pad_up = (0, -diff) if diff < 0 else (0, 0)
+        up = np.pad(uptroughs, pad_up, mode='constant')
+        down = np.pad(downtroughs, pad_down, mode='constant')
+        mask = np.isclose(up, down, atol=5)
+        common = uptroughs[np.where(mask)[0][0]]
         self.data = self.data.loc[common:]
         self.data = self.data.reset_index(drop=True)
 
@@ -123,12 +110,11 @@ class ERP:
         TODO: fix these so they're not hardcoded in
         a5max = max(A5)
         a6max = max(A6)
-        """
         a5max = 20
         a6max = 30
+        """
         uppeaks, _ = find_peaks(a5, height=4)
         downpeaks, _ = find_peaks(a6, height=4)
-        common = np.intersect1d(uppeaks, downpeaks)
         mask = np.isclose(uppeaks[:,None], downpeaks, atol=15)
         idx, _ = np.where(mask)
         last_first = uppeaks[idx[4]]
@@ -137,6 +123,7 @@ class ERP:
         self.data = self.data.reset_index(drop=True)
         Timestamps = (self.data['TimeStamp'].to_numpy() - self.data['TimeStamp'].to_numpy()[0])
         self.data['Adjusted Timestamp'] = Timestamps
+        return 'Data trimmed to relevant timeframe\n'
 
 
 
@@ -156,10 +143,29 @@ class ERP:
         self.data['A5'] = a5
         self.data['A6'] = a6
 
-    def dump_to_csv(self):
-        """ Export EEG and peakdata with timestamps to CSV usable in MatLab
+    def dump_data(self):
+        """ Create an output folder and dump the csv and figure into it
+        If another folder with that name exists this will create a folder with the date and time appended to the folder name
         """
-        self.data.to_csv('data.csv', index=True) 
+        input_file = self.file.split('.')[0]
+        cwd = os.getcwd()
+        folder = 'output_{}'.format(input_file)
+        path = os.path.join(cwd, folder)
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            day = date.today().strftime('%d-%m-%Y')
+            time = datetime.datetime.now().strftime('%H:%M:%S')
+            folder = 'output_{}_{}_{}'.format(input_file, day, time)
+            path = os.path.join(cwd, folder)
+            os.mkdir(path)
+        csv = '{}.csv'.format(input_file)
+        png = '{}.png'.format(input_file)
+        csv_path = os.path.join(path, csv)
+        png_path = os.path.join(path, png)
+        self.data.to_csv(csv_path, index=True)
+        self.fig.savefig(png_path)
+
 
     def find_epochs(self):
         """ Find the start of the timeframes surrounding each flash and store in 2 separate lists 
@@ -179,6 +185,7 @@ class ERP:
             eeg = eeg.reset_index(drop=True)
             eeg.index.name = 'Index'
             self.down_epochs.append(eeg)
+        return 'Epochs isolated. Computing standard error of the mean...\n'
 
 
     def average_epochs(self):
@@ -202,10 +209,14 @@ class ERP:
         self.down_epochs = averaged_down
         
 
-    def plot_data(self):
+    def plot_data(self, a5, peaks5, a6, peaks6):
         """ Dummy method used in testing/writing """
-        analog_data = self.data[['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']]
-        plt.plot(analog_data)
+        # analog_data = self.data[['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']]
+        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18,8))
+        ax[0].plot(a5)
+        ax[0].scatter(peaks5, a5[peaks5], marker='x', color='red')
+        ax[1].plot(a6)
+        ax[1].scatter(peaks6, a6[peaks6], marker='x', color='red')
         plt.show()
 
 
@@ -232,13 +243,17 @@ class ERP:
             ch = 'ch{}'.format(i)
             filtered_channel = self.bandpass_filter(self.data[ch], lowcut, highcut)
             self.data[ch] = filtered_channel
+        return "EEG data filtered\n"
 
     def std_err_mean(self, data):
         return stats.sem(data)
 
     def compute_sem(self):
-        """ 
-        TODO: document
+        """ Computes the standard error of the mean
+        For both up and down epochs:
+            Creates a DataFrame for each channel where each column is a different epoch
+            Computes the standard error of the mean for each row (a row is a single sample, there are the same amount of samples in every epoch)
+        Fills the self.standard_errors DataFrame with the sem for each sample for each channel of both up and down
         """
         idx = self.up_epochs[0].index
         self.standard_errors = pd.DataFrame(index=idx)
@@ -288,13 +303,11 @@ class ERP:
         """ Plot the average of each epoch for all 8 channels
         Up: orange
         Down: blue
-        TODO: legend
-        TODO: standardize axes
         """
         self.fig, (top, bottom) = plt.subplots(nrows=2, ncols=4, figsize=(18,8))
         txt = 'Each of these figures represents the average of each epoch surrounding either an up or down triangle\nAn epoch contains the brainwave data from 0.2 seconds before the stimuli and 0.8 seconds after\nThe dotted line represents the appearance of the stimuli on the screen'
-        txt = 'Number of up triangles: {}\nNumber of down triangles: {}'.format(len(self.up_peaks[0]), len(self.down_peaks[0]))
-        self.fig.text(0.01,0.93,txt)
+        txt = 'Close this window to finish running the program.\n\nNumber of up triangles: {}\nNumber of down triangles: {}'.format(len(self.up_peaks[0]), len(self.down_peaks[0]))
+        self.fig.text(0.01,0.91,txt)
         legax = None
         # plt.ylim(-25, 7)
         xticks = [0, 50, 100, 150, 200, 250]
@@ -351,34 +364,46 @@ class ERP:
         blue_patch = mpatches.Patch(color='blue', label='Down Triangles')
         self.fig.legend(handles=[red_patch, blue_patch],loc='outside upper right')
         plt.show()
-
-
-
-    def save_fig(self):
-        """ Save the figure """
-        self.fig.savefig('triangles.png')
         
 
 
     def main(self):
-        # self.read_bci_text_file()
-        self.read_raw_erp()
-        self.clean_raw_erp()
-        # self.trim_to_video()
-        self.trim_to_video_2()
-        self.trim_data()
+        self.read_bci_text_file()
+        print(self.read_raw_erp())
+        print(self.clean_raw_erp())
+        self.trim_to_video()
+        print(self.trim_data())
         self.clean_peaks()
-        self.filter_EEG()
+        print(self.filter_EEG())
         # self.serialize()
-        self.dump_to_csv()
-        self.find_epochs()
+        print(self.find_epochs())
+        self.compute_sem()
+        self.average_epochs()
+        # self.plot_raw_channels()
+        self.plot_avgepochs_channels()
+        self.dump_data()
+    
+    def testing_main(self):
+        # self.read_bci_text_file()
+        print(self.read_raw_erp())
+        print(self.clean_raw_erp())
+        # self.serialize()
+        self.trim_to_video()
+        print(self.trim_data())
+        # return
+        self.clean_peaks()
+        # return
+        print(self.filter_EEG())
+        # self.serialize()
+        # self.dump_to_csv()
+        print(self.find_epochs())
         self.compute_sem()
         self.average_epochs()
         # self.plot_raw_channels()
         self.plot_avgepochs_channels()
         # self.save_fig()
+        # self.dump_data()
         print("yuh")
-
 
 
 
