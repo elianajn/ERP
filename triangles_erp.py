@@ -1,4 +1,3 @@
-# from turtle import color
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -8,7 +7,7 @@ from scipy import stats
 import os
 import pickle
 from datetime import date
-import datetime # TODO: this could be cleaner
+import datetime
 
 class ERP:
     def __init__(self):
@@ -16,9 +15,7 @@ class ERP:
         UP = left = A5 = Analog Channel 0
         DOWN = right = A6 = Analog Channel 1
         """
-        # self.openbcipath = '/Users/ellaneurohr/Desktop/erp/firstone.txt' #TODO: delete
         self.sample_rate = 250
-        # self.data = self.read_raw_erp(self.openbcipath) # TODO: read data
         self.data = None
         self.fig = None
         self.file = 'test1.txt'
@@ -32,8 +29,6 @@ class ERP:
     def read_bci_text_file(self):
         """ Read in the name of the text file from the user. Save name so that output csv has the same name"""
         self.file = input("Name of the text file (ex. demo.txt): ")
-
-
 
     def read_raw_erp(self):
         """ Read into txt file that is the output of Open BCI
@@ -207,7 +202,6 @@ class ERP:
 
     def plot_data(self, a5, peaks5, a6, peaks6):
         """ Dummy method used in testing/writing """
-        # analog_data = self.data[['ch1', 'ch2', 'ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8']]
         fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18,8))
         ax[0].plot(a5)
         ax[0].scatter(peaks5, a5[peaks5], marker='x', color='red')
@@ -218,7 +212,7 @@ class ERP:
 
     def bandpass_filter(self, data, lowcut, highcut, order=4):
         """
-        TODO: order???? 
+        TODO: document
         """
         nyquist = 0.5 * self.sample_rate
         low = lowcut / nyquist
@@ -231,7 +225,8 @@ class ERP:
     def filter_EEG(self):
         """ Filter EEG data
         TODO: https://erpinfo.org/order-of-steps
-        High pass filter at 0.1 Hz
+        TODO: document
+        Bandpass filter from 0.5 - 30 Hz
         """
         lowcut = 0.5
         highcut = 30
