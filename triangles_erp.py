@@ -1,18 +1,14 @@
-import enum
-from turtle import color
+# from turtle import color
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import numpy as np
 from scipy.signal import find_peaks, butter, filtfilt
 from scipy import stats
-import bootstrapped.bootstrap as bs
-import bootstrapped.stats_functions as bs_stats
 import os
 import pickle
 from datetime import date
 import datetime # TODO: this could be cleaner
-import shutil
 
 class ERP:
     def __init__(self):
@@ -362,7 +358,7 @@ class ERP:
         # plt.figlegend()
         red_patch = mpatches.Patch(color='red', label='Up Triangles')
         blue_patch = mpatches.Patch(color='blue', label='Down Triangles')
-        self.fig.legend(handles=[red_patch, blue_patch],loc='outside upper right')
+        self.fig.legend(handles=[red_patch, blue_patch],loc='upper right')
         plt.show()
         
 
