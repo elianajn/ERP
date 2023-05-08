@@ -18,7 +18,7 @@ class ERP:
         self.sample_rate = 250
         self.data = None
         self.fig = None
-        self.file = 'test1.txt'
+        self.file = 'demo.txt'
         self.up_peaks = None
         self.down_peaks = None
         self.up_epochs = []
@@ -154,8 +154,31 @@ class ERP:
         png = '{}.png'.format(input_file)
         csv_path = os.path.join(path, csv)
         png_path = os.path.join(path, png)
+        fig_csv_path = os.path.join(path, 'figures.csv')
         self.data.to_csv(csv_path, index=True)
         self.fig.savefig(png_path)
+        epochs = self.format_figdata()
+        epochs.to_csv(fig_csv_path)
+
+
+
+    def format_figdata(self):
+        up_newnames = {}
+        down_newnames = {}
+        for i in range(1,9):
+            oldname = 'ch{}'.format(i)
+            up_newname = 'up_ch{}'.format(i)
+            down_newname = 'down_ch{}'.format(i)
+            up_newnames[oldname] = up_newname
+            down_newnames[oldname] = down_newname
+        up = self.up_epochs.rename(columns=up_newnames)
+        down = self.down_epochs.rename(columns=down_newnames)
+        idx = up.index.to_numpy()
+        idx = ((idx / self.sample_rate) - 0.2)*1000
+        epochs = pd.concat([up, down], axis=1)
+        epochs.index = idx
+        epochs.index.name = 'Time (ms)'
+        return epochs
 
 
     def find_epochs(self):
@@ -299,13 +322,12 @@ class ERP:
         txt = 'Each of these figures represents the average of each epoch surrounding either an up or down triangle\nAn epoch contains the brainwave data from 0.2 seconds before the stimuli and 0.8 seconds after\nThe dotted line represents the appearance of the stimuli on the screen'
         txt = 'Close this window to finish running the program.\n\nNumber of up triangles: {}\nNumber of down triangles: {}'.format(len(self.up_peaks[0]), len(self.down_peaks[0]))
         self.fig.text(0.01,0.91,txt)
-        legax = None
-        # plt.ylim(-25, 7)
         xticks = [0, 50, 100, 150, 200, 250]
         labels = list(map(lambda x : (x-50)/self.sample_rate, xticks))
-
+        titles = ['Frontal Left', 'Frontal Right', 'Central Left', 'Central Right', 'Parietal Left', 'Parietal Right', 'Occipital Left', 'Occipital Right']
+        self.fig.suptitle(self.file.split('.')[0])
         for i, ax in enumerate(top, start=1):
-            title = 'Channel {}'.format(i)
+            title = titles.pop(0)
             ax.set_title(title)
             ch = 'ch{}'.format(i)
             ax.plot(self.up_epochs[ch], color='red')
@@ -324,15 +346,8 @@ class ERP:
             ax.set_xticks(xticks)
             ax.set_xticklabels(labels)
 
-            legax = ax
-            # print('Channel {} max: {}\n Channel {} min: {}'.format(i, self.up_epochs[ch].max(), i, self.up_epochs[ch].min()))
-            # ax.set_yticks(ticks=np.arange(self.up_epochs[ch].min()+1000, self.up_epochs.min()-1000))
-        # legax.legend()
-        # handles, labels = legax.get_legend_handles_labels()
-        # self.fig.legend(handles, labels, loc='upper center')
-        # plt.legend([red, blue], ['Up', 'Down'])
         for i, ax in enumerate(bottom, start=5):
-            title = 'Channel {}'.format(i)
+            title = titles.pop(0)
             ax.set_title(title)
             ch = 'ch{}'.format(i)
             ax.plot(self.up_epochs[ch], color='red')
@@ -350,7 +365,6 @@ class ERP:
             ax.set_ylim(-25, 15)
             ax.set_xticks(xticks)
             ax.set_xticklabels(labels)
-        # plt.figlegend()
         red_patch = mpatches.Patch(color='red', label='Up Triangles')
         blue_patch = mpatches.Patch(color='blue', label='Down Triangles')
         self.fig.legend(handles=[red_patch, blue_patch],loc='upper right')
@@ -370,31 +384,8 @@ class ERP:
         print(self.find_epochs())
         self.compute_sem()
         self.average_epochs()
-        # self.plot_raw_channels()
         self.plot_avgepochs_channels()
         self.dump_data()
-    
-    def testing_main(self):
-        # self.read_bci_text_file()
-        print(self.read_raw_erp())
-        print(self.clean_raw_erp())
-        # self.serialize()
-        self.trim_to_video()
-        print(self.trim_data())
-        # return
-        self.clean_peaks()
-        # return
-        print(self.filter_EEG())
-        # self.serialize()
-        # self.dump_to_csv()
-        print(self.find_epochs())
-        self.compute_sem()
-        self.average_epochs()
-        # self.plot_raw_channels()
-        self.plot_avgepochs_channels()
-        # self.save_fig()
-        # self.dump_data()
-        print("yuh")
 
 
 
