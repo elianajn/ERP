@@ -49,7 +49,7 @@ class ERP:
         Timestamps = (self.data['TimeStamp'].to_numpy() - self.data['TimeStamp'].to_numpy()[0])
         total = str(datetime.timedelta(seconds = Timestamps[-1]))
         total = total[total.find(':')+1:]
-        return 'Input file loaded\nTotal length of recording: {}\n'.format(total)
+        return '\nInput file loaded\nTotal length of recording: {}\n'.format(total)
 
 
     def serialize(self):
@@ -77,8 +77,8 @@ class ERP:
         a5 = self.data['A5']
         a6 = self.data['A6']
         common_min = min(set(a5) & set(a6))
-        uptroughs, _ = find_peaks(-a5, prominence=common_min, width=self.sample_rate*10)
-        downtroughs, _ = find_peaks(-a6, prominence=common_min, width=self.sample_rate*10)
+        uptroughs, _ = find_peaks(-a5, height=common_min, width=self.sample_rate*10)
+        downtroughs, _ = find_peaks(-a6, height=common_min, width=self.sample_rate*10)
         diff = len(uptroughs)-len(downtroughs)
         pad_down = (0, diff) if diff > 0 else (0, 0)
         pad_up = (0, -diff) if diff < 0 else (0, 0)
@@ -104,17 +104,19 @@ class ERP:
         a5max = 20
         a6max = 30
         """
-        uppeaks, _ = find_peaks(a5, height=4)
-        downpeaks, _ = find_peaks(a6, height=4)
+        uppeaks, _ = find_peaks(a5, height=4, distance=0.1*self.sample_rate)
+        downpeaks, _ = find_peaks(a6, height=4, distance=0.1*self.sample_rate)
         mask = np.isclose(uppeaks[:,None], downpeaks, atol=15)
         idx, _ = np.where(mask)
         last_first = uppeaks[idx[4]]
-        first_last = uppeaks[idx[-5]]
+        first_last = uppeaks[idx[5]]
         self.data = self.data.loc[last_first+1:first_last-1]
         self.data = self.data.reset_index(drop=True)
         Timestamps = (self.data['TimeStamp'].to_numpy() - self.data['TimeStamp'].to_numpy()[0])
         self.data['Adjusted Timestamp'] = Timestamps
-        return 'Data trimmed to relevant timeframe\n'
+        total = str(datetime.timedelta(seconds = Timestamps[-1]))
+        total = total[total.find(':')+1:]
+        return 'Data trimmed to relevant timeframe.\nLength of analyzed data: {}\nExpected length of analyzed data: 03:46:2\n'.format(total)
 
 
 
