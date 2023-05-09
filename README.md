@@ -1,6 +1,6 @@
 # Triangle ERP Experiment <!-- omit in toc -->
 By Eliana Neurohr
-
+![](output_demo/demo.png)
 <!-- no toc -->
 ## **Table of Contents** <!-- omit in toc -->
 - [**Dependencies**](#dependencies)
