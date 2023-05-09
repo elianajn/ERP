@@ -1,5 +1,6 @@
 # Triangle ERP Experiment <!-- omit in toc -->
-By Eliana Neurohr
+### ***By Eliana Neurohr*** <!-- omit in toc -->  
+  
 ![](output_demo/demo.png)
 <!-- no toc -->
 ## **Table of Contents** <!-- omit in toc -->
