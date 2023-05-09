@@ -1,5 +1,5 @@
 # Triangle ERP Experiment <!-- omit in toc -->
-By Ella Neurohr
+By Eliana Neurohr
 
 <!-- no toc -->
 ## **Table of Contents** <!-- omit in toc -->
@@ -22,9 +22,9 @@ By Ella Neurohr
     - filtfilt
   - stats
 - [datetime](https://docs.python.org/3/library/datetime.html)
-- pickle
-  - included in Python 3.9.*, not used in main experiment but useful for testing
-- os
+- [pickle](https://docs.python.org/3/library/pickle.html)
+  - included in Python 3.9.* ; not used in main experiment but useful for testing
+- [os](https://docs.python.org/3/library/os.html)
 
 ## **Neurophysiology Student Instructions**
 This experiment requires Python 3 to be installed. If you do not have Python 3 please download [here](https://www.python.org/downloads/).
@@ -57,4 +57,4 @@ Details coming...
 
 ## **References**
 Experiment inspired by https://docs.openbci.com/Examples/VideoExperiment/  
-Code reference: https://github.com/OpenBCI/OpenBCI_Experiment
+Code inspiration: https://github.com/OpenBCI/OpenBCI_Experiment
