@@ -33,7 +33,6 @@ class ERP:
     def read_raw_erp(self):
         """ Read into txt file that is the output of Open BCI
         First 4 lines need to be removed and 5 is header
-        TODO: this doesn't work super well when it can't find it
         """
         cwd = os.getcwd()
         while(True):
@@ -89,6 +88,7 @@ class ERP:
         self.data = self.data.loc[common:]
         self.data = self.data.reset_index(drop=True)
 
+
     def trim_data(self):
         """ 
         First five peaks are intro signals
@@ -119,7 +119,6 @@ class ERP:
         return 'Data trimmed to relevant timeframe.\nLength of analyzed data: {}\nExpected length of analyzed data: 03:46:2\n'.format(total)
 
 
-
     def clean_peaks(self):
         """ Convert peaks to 1 everything else to 0 (Channels A6 and A7) 
         The peak of an event occurs at the apex, not at the onset
@@ -135,6 +134,7 @@ class ERP:
         a6[downpeaks] = 1
         self.data['A5'] = a5
         self.data['A6'] = a6
+
 
     def dump_data(self):
         """ Create an output folder and dump the csv and figure into it
@@ -163,8 +163,9 @@ class ERP:
         epochs.to_csv(fig_csv_path)
 
 
-
     def format_figdata(self):
+        """ Format the data that is displayed in the figure so that it can be dumped to a CSV and further analyzed in Excel
+        """
         up_newnames = {}
         down_newnames = {}
         for i in range(1,9):
@@ -227,7 +228,7 @@ class ERP:
 
     def plot_data(self, a5, peaks5, a6, peaks6):
         """ Dummy method used in testing/writing """
-        fig, ax = plt.subplots(nrows=1, ncols=2, figsize=(18,8))
+        _, ax = plt.subplots(nrows=1, ncols=2, figsize=(18,8))
         ax[0].plot(a5)
         ax[0].scatter(peaks5, a5[peaks5], marker='x', color='red')
         ax[1].plot(a6)
@@ -249,7 +250,7 @@ class ERP:
 
     def filter_EEG(self):
         """ Filter EEG data
-        TODO: https://erpinfo.org/order-of-steps
+        https://erpinfo.org/order-of-steps
         TODO: document
         Bandpass filter from 0.5 - 30 Hz
         """
@@ -261,8 +262,10 @@ class ERP:
             self.data[ch] = filtered_channel
         return "EEG data filtered\n"
 
+
     def std_err_mean(self, data):
         return stats.sem(data)
+
 
     def compute_sem(self):
         """ Computes the standard error of the mean
@@ -290,14 +293,11 @@ class ERP:
             self.standard_errors[header] = stde
 
 
-
-
     def plot_raw_channels(self):
         """ Plot each channel indivdually with an average of the epochs 
+        Used for testing/debugging
         """
         self.fig, (top, bottom) = plt.subplots(nrows=2, ncols=4, figsize=(18,8))
-        # print(len(self.up_peaks[0]))
-        # print(np.ones(len(self.up_peaks[0])))
         tm = len(self.data)
         print(tm)
         for i, ax in enumerate(top, start=1):
@@ -322,6 +322,7 @@ class ERP:
         """
         self.fig, (top, bottom) = plt.subplots(nrows=2, ncols=4, figsize=(18,8))
         txt = 'Each of these figures represents the average of each epoch surrounding either an up or down triangle\nAn epoch contains the brainwave data from 0.2 seconds before the stimuli and 0.8 seconds after\nThe dotted line represents the appearance of the stimuli on the screen'
+        # Explanation not currently displayed for PY408 Lab
         txt = 'Close this window to finish running the program.\n\nNumber of up triangles: {}\nNumber of down triangles: {}'.format(len(self.up_peaks[0]), len(self.down_peaks[0]))
         self.fig.text(0.01,0.91,txt)
         xticks = [0, 50, 100, 150, 200, 250]
@@ -372,7 +373,6 @@ class ERP:
         self.fig.legend(handles=[red_patch, blue_patch],loc='upper right')
         plt.show()
         
-
 
     def main(self):
         self.read_bci_text_file()
