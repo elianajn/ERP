@@ -10,6 +10,7 @@
   - [**Starting Virtual Environment**](#starting-virtual-environment)
   - [**Running the Program**](#running-the-program)
 - [**EEG Filtering**](#eeg-filtering)
+- [**Artifact Rejection**](#artifact-rejection)
 - [**References**](#references)
 
 ## **Dependencies**
@@ -54,7 +55,19 @@ First, make sure that the .txt file of the EEG data has been moved into the ERP 
 You will be prompted to enter the name of the .txt file with the EEG data. You may also try the demo.txt file.
 The output CSV and image will be saved in a folder within the ERP folder once the window with the graphs that pops up is closed
 ## **EEG Filtering**
-Details coming...
+1. 0.5 - 30 Hz Bandpass filter before epochs are isolated
+2. Perform artifact correction # NOT DONE
+3. Isolate epochs and perform baseline correction (baseline correction not done)
+4. Artifact rejection  
+   *"Many systems require that you perform artifact after epoching, so I have put this step after epoching.  However, it works just as well to perform artifact rejection on the continuous EEG, prior to epoching, if your system allows it."*
+5. Average the single-trial EEG epochs to create single-subject averaged ERP waveforms
+6. Plot ERP waveforms  
+    *"You may want to apply a low-pass filter (e.g., half amplitude cutoff = 30 Hz, slope = 12-24 dB/octave) before plotting so that you can see the data more clearly."*
+
+## **Artifact Rejection**
+Artifacts are parts of the recorded signal that arise from sources other than the source of interest (i.e., neuronal activity in the brain)
+https://mne.tools/dev/auto_tutorials/preprocessing/10_preprocessing_overview.html
+
 
 ## **References**
 Experiment inspired by https://docs.openbci.com/Examples/VideoExperiment/  
