@@ -345,7 +345,7 @@ class ERP:
             ax.fill_between(self.up_epochs[ch].index, dy1, dy2, color='blue', alpha=0.3)
             ax.axvline(x=50, color='black', linestyle='--', alpha=0.5)
             ax.axhline(y=0, color='black')
-            ax.set_ylim(-25, 15)
+            ax.set_ylim(15, -25)
             ax.set_xticks(xticks)
             ax.set_xticklabels(labels)
 
@@ -365,7 +365,7 @@ class ERP:
             ax.fill_between(self.up_epochs[ch].index, dy1, dy2, color='blue', alpha=0.3)
             ax.axvline(x=50, color='black', linestyle='--', alpha=0.5)
             ax.axhline(y=0, color='black')
-            ax.set_ylim(-25, 15)
+            ax.set_ylim(15, -25)
             ax.set_xticks(xticks)
             ax.set_xticklabels(labels)
         red_patch = mpatches.Patch(color='red', label='Up Triangles')
