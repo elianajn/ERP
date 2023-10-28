@@ -3,6 +3,8 @@ import numpy as np
 import mne
 import pickle
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gs
+from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import pandas
 import os
 import sys
@@ -16,9 +18,12 @@ class ERP:
         """
         self.sample_rate = 250
         self.file = 'flowexperiment.csv'
+        self.eeg_channels = ['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8']
         self.raw = None
         self.up_events = None
         self.down_events = None
+        self.up_epochs = None
+        self.down_epochs = None
         # self.raw.drop_channels(['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Timestamp'])
 
     def sandbox(self):
@@ -32,6 +37,9 @@ class ERP:
         print(type(fig))
         fig.show()
     
+    def basic_plot(self):
+        self.raw.plot(block=True)
+
     def serialize(self, data):
         """ Serialize the data object so you don't have to keep reading the same file in. 
         Used during testing/writing 
@@ -40,6 +48,7 @@ class ERP:
 
     def load_serialized(self):
         self.raw = pickle.load(open('data.p', 'rb'))
+        print('Raw data loaded from serialized object\n')
 
     def read_txt_file(self):
         """
@@ -64,7 +73,7 @@ class ERP:
                 self.file = input("Unable to open file. Please confirm the name of the BCI csv file and reenter: ")
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=ch_names, sfreq=self.sample_rate)
-        self.raw = mne.io.RawArray(data_np, info)
+        self.raw = mne.io.RawArray(data_np, info, verbose='ERROR')
         # self.serialize(self.raw)
     
     def trim_raw_data(self):
@@ -110,20 +119,61 @@ class ERP:
         """
         TODO: oh lordt
         """
-        pass
+        self.raw.filter(l_freq=2, h_freq=10, picks=self.eeg_channels, verbose='ERROR')
         
     def find_stimuli(self):
         """
         Find the events in the two stimuli channels that indicate that a triangle was displayed
+        Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
         """
-        self.raw.drop_channels(['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Timestamp'])
-        up = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate)
-        down = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate)
-        # up = mne.find_events(self.raw, stim_channel='STI0', consecutive=False)
-        self.raw.plot(block=True, events=down)
-        
+        self.up_events = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        print('{} up triangles found\n'.format(len(self.up_events)))
+        self.down_events = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        print('{} down triangles found\n'.format(len(self.down_events)))
 
-        # self.raw.plot(block=True, events=up)
+    def find_epochs(self):
+        """
+        Isolate the up and down triangle epochs (0.2 seconds before stim signal to 0.8 seconds after)
+        TODO may be good to delete the raw data after getting this
+        """
+        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=-0.2, tmax=0.8, verbose='ERROR')
+        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=-0.2, tmax=0.8, verbose='ERROR')
+
+    def average_epochs(self):
+        """
+        Evoked data are obtained by averaging epochs
+        """
+        self.up_evoked = self.up_epochs.average(picks=self.eeg_channels)
+        self.down_evoked = self.down_epochs.average(picks=self.eeg_channels)
+        # evokeds = dict(
+        #     up=list(self.up_epochs.iter_evoked()),
+        #     down=list(self.down_epochs.iter_evoked()),
+        # )
+        # print(evokeds['up'])
+        print(self.up_evoked.pick(['EEG 2']))
+        # fig = mne.viz.plot_compare_evokeds(evokeds, combine="mean", picks=self.eeg_channels)
+
+    def plot_data(self):
+        """
+        TODO montages
+        """
+        evokeds = dict(
+            up=list(self.up_epochs.iter_evoked()),
+            down=list(self.down_epochs.iter_evoked()),
+        )
+        fig = plt.figure(figsize=(18, 8))
+        for i, channel in enumerate(self.eeg_channels, start=1):
+            plot = mne.viz.plot_compare_evokeds(evokeds, picks=[channel], title=channel, show=False)
+            canvas = FigureCanvas(plot[0])
+            canvas.draw()
+            img = np.asarray(canvas.buffer_rgba())
+            subplot = fig.add_subplot(2, 4, i)
+            subplot.imshow(img)
+            plt.close(plot[0])
+
+        plt.show()
+
+
 
     def main(self):
         # self.sandbox()
@@ -131,7 +181,12 @@ class ERP:
         self.load_serialized()
         # self.trim_raw_data()
         # print(self.trim_raw_data()) #TODO: uncomment for logging
+        self.filter_raw_data()
         self.find_stimuli()
+        self.find_epochs()
+        # self.average_epochs()
+        self.plot_data()
+
 
 erp = ERP()
 erp.main()

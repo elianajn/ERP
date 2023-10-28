@@ -345,7 +345,7 @@ class ERP:
             ax.fill_between(self.up_epochs[ch].index, dy1, dy2, color='blue', alpha=0.3)
             ax.axvline(x=50, color='black', linestyle='--', alpha=0.5)
             ax.axhline(y=0, color='black')
-            ax.set_ylim(-25, 15)
+            ax.set_ylim(15, -25)
             ax.set_xticks(xticks)
             ax.set_xticklabels(labels)
 
@@ -365,7 +365,7 @@ class ERP:
             ax.fill_between(self.up_epochs[ch].index, dy1, dy2, color='blue', alpha=0.3)
             ax.axvline(x=50, color='black', linestyle='--', alpha=0.5)
             ax.axhline(y=0, color='black')
-            ax.set_ylim(-25, 15)
+            ax.set_ylim(15, -25)
             ax.set_xticks(xticks)
             ax.set_xticklabels(labels)
         red_patch = mpatches.Patch(color='red', label='Up Triangles')
@@ -375,7 +375,7 @@ class ERP:
         
 
     def main(self):
-        self.read_bci_text_file()
+        # self.read_bci_text_file()
         print(self.read_raw_erp())
         print(self.clean_raw_erp())
         self.trim_to_video()
@@ -387,7 +387,7 @@ class ERP:
         self.compute_sem()
         self.average_epochs()
         self.plot_avgepochs_channels()
-        self.dump_data()
+        # self.dump_data()
 
 
 
