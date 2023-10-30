@@ -30,11 +30,18 @@ class ERP:
         self.sample_rate = 250
         # self.file = 'demo.csv'
         self.file = 'demo.csv'
-        self.eeg_channels = ['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8']
-        self.locations = {'EEG 1': 'Frontal Left', 'EEG 2': 'Frontal Right', 'EEG 3': 'Central Left', 'EEG 4': 'Central Right', 'EEG 5': 'Parietal Left', 'EEG 6': 'Parietal Right', 'EEG 7': 'Occipital Left', 'EEG 8': 'Occipital Right'}
-        self.filter_params = dict(
-            l_freq = 2,
-            h_freq = 10
+        # self.eeg_channels = ['EEG1', 'EEG2', 'EEG3', 'EEG4', 'EEG5', 'EEG6', 'EEG7', 'EEG8']
+        # self.eeg_channels = ['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8']
+        self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
+        # self.locations = {'EEG1': 'Frontal Left', 'EEG2': 'Frontal Right', 'EEG3': 'Central Left', 'EEG4': 'Central Right', 'EEG5': 'Parietal Left', 'EEG6': 'Parietal Right', 'EEG7': 'Occipital Left', 'EEG8': 'Occipital Right'}
+        # self.locations = {'EEG 1': 'Frontal Left', 'EEG 2': 'Frontal Right', 'EEG 3': 'Central Left', 'EEG 4': 'Central Right', 'EEG 5': 'Parietal Left', 'EEG 6': 'Parietal Right', 'EEG 7': 'Occipital Left', 'EEG 8': 'Occipital Right'}
+        self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
+        self.params = dict(
+            l_freq = 1.5,
+            h_freq = 8,
+            t_min = -0.3,
+            t_max = 0.7,
+            eeg_drop = 225
         )
         self.raw = None
         self.up_events = None
@@ -52,7 +59,6 @@ class ERP:
         down_evoked = self.down_epochs.average(self.eeg_channels)
         print(type(up_evoked))
 
-        
 
     def serialize(self, data):
         """ Serialize the data object so you don't have to keep reading the same file in. 
@@ -76,7 +82,9 @@ class ERP:
         Open and read the raw data file that is output from OpenBCI
         Pandas DataFrame -> np ndarray -> mne.Raw
         """
-        ch_names = ['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
+        # ch_names = ['Sample Index', 'EEG1', 'EEG2', 'EEG3', 'EEG4', 'EEG5', 'EEG6', 'EEG7', 'EEG8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
+        # ch_names = ['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
+        ch_names = ['Sample Index', 'Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
         while(True):
             print('\nLoading input file...\n')
             cwd = os.getcwd()
@@ -89,7 +97,10 @@ class ERP:
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=ch_names, sfreq=self.sample_rate)
         info.set_montage(None, on_missing='ignore')
+        # info.set_montage('standard_1020')
         self.raw = mne.io.RawArray(data_np, info, verbose='ERROR')
+        channel_types = dict.fromkeys(self.eeg_channels, 'eeg')
+        self.raw.set_channel_types(channel_types, on_unit_change='ignore') #TODO: make sure weird shit isnt happening
         total = str(datetime.timedelta(seconds=self.raw.n_times / self.sample_rate))
         return 'Input file loaded succesfully\nTotal length of recording: {}\n'.format(total)
         # self.serialize(self.raw)
@@ -133,13 +144,6 @@ class ERP:
         self.serialize(self.raw)
         return 'Data trimmed to relevant timeframe.\nLength of analyzed data: {}\nExpected length of analyzed data: 03:46:2\n'.format(total)
 
-    def filter_raw_data(self):
-        """
-        Bandpass filter from 2 - 10 Hz
-        """
-        self.raw.filter(l_freq=self.filter_params['l_freq'], h_freq=self.filter_params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
-        # self.raw.filter(l_freq=self.filter_params['l_freq'], h_freq=self.filter_params['h_freq'], picks=self.eeg_channels)
-        
     def find_stimuli(self):
         """
         Find the events in the two stimuli channels that indicate that a triangle was displayed
@@ -155,9 +159,23 @@ class ERP:
         Isolate the up and down triangle epochs (0.2 seconds before stim signal to 0.8 seconds after)
         TODO may be good to delete the raw data after getting this
         """
-        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=-0.2, tmax=0.8, verbose='ERROR')
-        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=-0.2, tmax=0.8, verbose='ERROR')
+        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
+        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
         return 'Epochs isolated\n'
+
+    def filter_raw_data(self):
+        """
+        Bandpass filter from 2 - 10 Hz
+        """
+        self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
+        # self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels)
+
+    def artifact_rejection(self):
+        reject_criteria = dict(eeg=self.params['eeg_drop'])
+        self.up_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
+        self.down_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
+        # self.up_epochs.plot_drop_log()
+        # self.down_epochs.plot_drop_log()
 
     def plot_data(self):
         """
@@ -188,7 +206,10 @@ class ERP:
             else:
                 subplot = axs[0][i]
             # plot = mne.viz.plot_compare_evokeds(evokeds, picks=[channel], show=False, legend=False, title='', colors=colors)[0]
+            # try:
             plot = mne.viz.plot_compare_evokeds(evokeds, picks=[channel], show=False, legend=False, title='', colors=colors, show_sensors=False)[0]
+            # except IndexError:
+                # pass
             canvas = FigureCanvas(plot)
             canvas.draw()
             img = np.asarray(canvas.buffer_rgba())
@@ -231,11 +252,12 @@ class ERP:
     def main(self):
         self.read_csv_file()
         print(self.read_raw_data())
-        # self.load_serialized()
         print(self.trim_raw_data())
+        # self.load_serialized()
         self.filter_raw_data()
         print(self.find_stimuli())
         print(self.find_epochs())
+        self.artifact_rejection()
         self.plot_data()
         self.dump_data()
         # self.sandbox()
