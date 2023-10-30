@@ -17,6 +17,8 @@ from datetime import date
 - delete sample data from /Users/ellaneurohr/mne_data
 - Add file into output folder that describes what is being output
 - Actually add montages in (ignored while creating mne.Info in read_raw_data and in plotting)
+- Read in monitor sizing and use while creating figure
+- Use Docker instead of venv
 """
 
 class ERP:
@@ -220,7 +222,7 @@ class ERP:
 
 
     def main(self):
-        self.read_csv_file()
+        # self.read_csv_file()
         print(self.read_raw_data())
         # self.load_serialized()
         print(self.trim_raw_data())
@@ -228,7 +230,7 @@ class ERP:
         self.find_stimuli()
         self.find_epochs()
         self.plot_data()
-        self.dump_data()
+        # self.dump_data()
         # self.sandbox()
 
 erp = ERP()
