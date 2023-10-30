@@ -375,7 +375,7 @@ class ERP:
         
 
     def main(self):
-        self.read_bci_text_file()
+        # self.read_bci_text_file()
         print(self.read_raw_erp())
         print(self.clean_raw_erp())
         self.trim_to_video()
@@ -387,7 +387,7 @@ class ERP:
         self.compute_sem()
         self.average_epochs()
         self.plot_avgepochs_channels()
-        self.dump_data()
+        # self.dump_data()
 
 
 

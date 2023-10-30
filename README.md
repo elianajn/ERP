@@ -1,7 +1,9 @@
 # Triangle ERP Experiment <!-- omit in toc -->
 #### ***By Eliana Neurohr*** <!-- omit in toc -->  
+
+> ***Note***: *This ReadMe is a work in progress, your patience is appreciated*
   
-![](output_demo/demo.png)
+<!-- ![](output_demo/demo.png) -->
 <!-- no toc -->
 ## **Table of Contents** <!-- omit in toc -->
 - [**Dependencies**](#dependencies)
@@ -14,19 +16,15 @@
 - [**References**](#references)
 
 ## **Dependencies**
+- [mne](https://mne.tools/stable/index.html); full citation below
 - [pandas](https://pandas.pydata.org/)
-- [matplotlib](https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html)
 - [numpy](https://numpy.org/)
-- [scipy](https://docs.scipy.org/doc/scipy/)
-  - signal
-    - findpeaks
-    - butter
-    - filtfilt
-  - stats
+- [matplotlib](https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html)
 - [datetime](https://docs.python.org/3/library/datetime.html)
 - [pickle](https://docs.python.org/3/library/pickle.html)
   - included in Python 3.9.* ; not used in main experiment but useful for testing
 - [os](https://docs.python.org/3/library/os.html)
+
 
 ## **Neurophysiology Student Instructions**
 This experiment requires Python 3 to be installed. If you do not have Python 3 please download [here](https://www.python.org/downloads/).
