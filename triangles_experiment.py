@@ -33,7 +33,7 @@ class ERP:
         self.eeg_channels = ['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8']
         self.locations = {'EEG 1': 'Frontal Left', 'EEG 2': 'Frontal Right', 'EEG 3': 'Central Left', 'EEG 4': 'Central Right', 'EEG 5': 'Parietal Left', 'EEG 6': 'Parietal Right', 'EEG 7': 'Occipital Left', 'EEG 8': 'Occipital Right'}
         self.filter_params = dict(
-            l_freq = 2,
+            l_freq = 1.5,
             h_freq = 10
         )
         self.raw = None
