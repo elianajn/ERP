@@ -3,7 +3,7 @@
 
 > ***Note***: *This ReadMe is a work in progress, your patience is appreciated*
   
-<!-- ![](output_demo/demo.png) -->
+![](output_demo/demo.png)
 <!-- no toc -->
 ## **Table of Contents** <!-- omit in toc -->
 - [**Dependencies**](#dependencies)
@@ -48,7 +48,7 @@ Open the Terminal on your computer. Lab computer instructions:
 ### **Running the Program**
 First, make sure that the .txt file of the EEG data has been moved into the ERP folder. It is highly recommended that you rename the text file to something more succinct with no spaces, but leave the .txt extension. 
 ```
-(venv) $ python triangles_erp.py
+(venv) $ python triangles_experiment.py
 ```
 You will be prompted to enter the name of the .txt file with the EEG data. You may also try the demo.txt file.
 The output CSV and image will be saved in a folder within the ERP folder once the window with the graphs that pops up is closed
