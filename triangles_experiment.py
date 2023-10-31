@@ -3,6 +3,7 @@ import mne
 import pickle
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+import matplotlib.table as mtable
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import pandas
@@ -48,6 +49,7 @@ class ERP:
         self.down_events = None
         self.up_epochs = None
         self.down_epochs = None
+        self.epoch_info = {'Expected': [30, 173]}
         self.fig = None
         # self.raw.drop_channels(['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Timestamp'])
 
@@ -152,11 +154,12 @@ class ERP:
         print('Finding stimuli signals...')
         self.up_events = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
         self.down_events = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        self.epoch_info['Found'] = [len(self.up_events), len(self.down_events)]
         return '{} up triangles found\n{} down triangles found\n'.format(len(self.up_events), len(self.down_events))
 
     def find_epochs(self):
         """
-        Isolate the up and down triangle epochs (0.2 seconds before stim signal to 0.8 seconds after)
+        Isolate the up and down triangle epochs (0.3 seconds before stim signal to 0.7 seconds after)
         TODO may be good to delete the raw data after getting this
         """
         self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
@@ -174,8 +177,25 @@ class ERP:
         reject_criteria = dict(eeg=self.params['eeg_drop'])
         self.up_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
         self.down_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
-        # self.up_epochs.plot_drop_log()
-        # self.down_epochs.plot_drop_log()
+        self.epoch_info['Rejected\nEpochs\n'] = [30 - len(self.up_epochs), 173 - len(self.down_epochs)]
+
+    def figure_description(self, subfig, colors):
+        axs = subfig.subplots(1, 4, sharex=True, sharey=True)
+        for ax in axs:
+            ax.set_axis_off()
+        up_patch = mpatches.Patch(color=colors['up'], label='Up Triangles')
+        down_patch = mpatches.Patch(color=colors['down'], label='Down Triangles')
+        axs[0].legend(handles=[up_patch, down_patch],loc='lower left')
+        triangle_data = pandas.DataFrame(self.epoch_info)
+        axs[2].table(cellText=triangle_data.values, colLabels=triangle_data.columns, rowLabels=['UP', 'DOWN'], rowLoc='right', loc='lower right', cellLoc='center', edges='open')
+        params = pandas.DataFrame({'Column 1':[
+            '{} Hz'.format(self.params['l_freq']),
+            '{} Hz'.format(self.params['h_freq']),
+            '{} µV'.format(self.params['eeg_drop'])]
+        }, index=['Lower Cutoff', 'Upper Cutoff', 'Reject Threshold'])
+        paramTable = axs[3].table(cellText=params.values, rowLabels=params.index, loc='lower center', rowLoc='right', cellLoc='center', edges='open')
+        paramTable.auto_set_column_width(0)
+        
 
     def plot_data(self):
         """
@@ -188,35 +208,20 @@ class ERP:
             down=list(self.down_epochs.iter_evoked()),
         )
         colors = {'up': 'tab:orange', 'down': 'tab:blue'}
-        self.fig = plt.figure('Figures', figsize=(18, 8), layout='tight')
+        self.fig = plt.figure('Figures', figsize=(18, 8), layout='constrained')
         self.fig.suptitle(self.file.split('.')[0], fontweight='demibold')
-        subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 5])
-        top = subfigs[0]
-        axs = subfigs[1].subplots(2, 4, sharex=True, sharey=True)
-
-        up_patch = mpatches.Patch(color=colors['up'], label='Up Triangles')
-        down_patch = mpatches.Patch(color=colors['down'], label='Down Triangles')
-        top.legend(handles=[up_patch, down_patch],loc='center left')
+        subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 8])
+        subfigs[1].get_layout_engine().set(wspace=0.1, hspace=0.1)
+        axs = subfigs[1].subplots(2, 4)
+        self.figure_description(subfigs[0], colors)
         txt = 'Close this window to finish running the program.'
-        # self.fig.text(0.001,0.965,txt, fontstyle='italic')
         closeText = self.fig.text(x=0.005, y=0.965,s=txt, fontstyle='italic')
         for i, channel in enumerate(self.eeg_channels):
             if i >= 4:
                 subplot = axs[1][i-4]
             else:
                 subplot = axs[0][i]
-            # plot = mne.viz.plot_compare_evokeds(evokeds, picks=[channel], show=False, legend=False, title='', colors=colors)[0]
-            # try:
-            plot = mne.viz.plot_compare_evokeds(evokeds, picks=[channel], show=False, legend=False, title='', colors=colors, show_sensors=False)[0]
-            # except IndexError:
-                # pass
-            canvas = FigureCanvas(plot)
-            canvas.draw()
-            img = np.asarray(canvas.buffer_rgba())
-            subplot.set_title(self.locations[channel])
-            subplot.set_axis_off()
-            subplot.imshow(img)
-            plt.close(plot)
+            mne.viz.plot_compare_evokeds(evokeds, picks=[channel], axes=subplot, show=False, legend=False, title=self.locations[channel], colors=colors, show_sensors=False)[0]
         plt.show()
         closeText.set_text('')
 
@@ -242,10 +247,10 @@ class ERP:
         png = '{}.png'.format(input_file)
         csv_path = os.path.join(path, csv)
         png_path = os.path.join(path, png)
-        dataframe = self.raw.to_data_frame(picks=['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'STI0', 'STI1'])
+        dataframe = self.raw.to_data_frame(picks= self.eeg_channels + ['STI0', 'STI1'])
         dataframe = dataframe.rename(columns={'time':'Time', 'STI0':'Up Stimulus', 'STI1':'Down Stimulus'})
         dataframe.to_csv(csv_path, index=True)
-        self.fig.savefig(png_path)
+        self.fig.savefig(png_path, facecolor=self.fig.get_facecolor(), bbox_inches='tight', pad_inches=0.2)
 
 
 
