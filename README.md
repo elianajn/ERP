@@ -53,11 +53,11 @@ First, make sure that the .csv file of the EEG data has been moved into the ERP 
 You will be prompted to enter the name of the .csv file with the EEG data. You may also try the demo.csv file.
 The output CSV and image will be saved in a folder within the ERP folder once the window with the graphs that pops up is closed  
 
-> If you're getting import issues, first make sure the venv is active. If it is, try:
-> ```
-> pip install <module causing issues> --force-reinstall
-> ```
-> The modules that would most likely cause issues are: numpy, scipy, pandas, matplotlib, mne
+If you're getting import issues, first make sure the venv is active. If it is, try:
+```
+pip install <module causing issues> --force-reinstall
+```
+The modules that would most likely cause issues are: numpy, scipy, pandas, matplotlib, mne
 
 ## **EEG Filtering**
 1. 0.5 - 30 Hz Bandpass filter before epochs are isolated
