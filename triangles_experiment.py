@@ -268,7 +268,7 @@ class ERP:
 
 
     def main(self):
-        # self.read_csv_file()
+        self.read_csv_file()
         print(self.read_raw_data())
         print(self.trim_raw_data())
         # self.load_serialized()
