@@ -191,8 +191,9 @@ class ERP:
         params = pandas.DataFrame({'Column 1':[
             '{} Hz'.format(self.params['l_freq']),
             '{} Hz'.format(self.params['h_freq']),
-            '{} µV'.format(self.params['eeg_drop'])]
-        }, index=['Lower Cutoff', 'Upper Cutoff', 'Reject Threshold'])
+            '{} µV'.format(self.params['eeg_drop']),
+            '{} Hz'.format(self.sample_rate)]
+        }, index=['Lower Cutoff', 'Upper Cutoff', 'Reject Threshold', 'Sample Rate'])
         paramTable = axs[3].table(cellText=params.values, rowLabels=params.index, loc='lower center', rowLoc='right', cellLoc='center', edges='open')
         paramTable.auto_set_column_width(0)
         
@@ -278,7 +279,7 @@ class ERP:
         self.artifact_rejection()
         self.plot_data()
         folder = self.dump_data()
-        self.dump_plotted_data(folder)
+        # self.dump_plotted_data(folder)
 
         # self.sandbox()
 
