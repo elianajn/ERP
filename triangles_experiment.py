@@ -277,7 +277,7 @@ class ERP:
         self.artifact_rejection()
         self.plot_data()
         folder = self.dump_data()
-        self.dump_plotted_data(folder)
+        # self.dump_plotted_data(folder)
 
         # self.sandbox()
 
