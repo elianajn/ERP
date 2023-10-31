@@ -143,7 +143,6 @@ class ERP:
         self.raw.crop(lastFirstTime, firstLastTime)
         seconds = self.raw.n_times / self.sample_rate
         total = str(datetime.timedelta(seconds=seconds))
-        self.serialize(self.raw)
         return 'Data trimmed to relevant timeframe.\nLength of analyzed data: {}\nExpected length of analyzed data: 03:46:2\n'.format(total)
 
     def find_stimuli(self):
