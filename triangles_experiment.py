@@ -208,7 +208,7 @@ class ERP:
             down=list(self.down_epochs.iter_evoked()),
         )
         colors = {'up': 'tab:orange', 'down': 'tab:blue'}
-        self.fig = plt.figure('Figures', figsize=(18, 8), layout='constrained')
+        self.fig = plt.figure('Figures', figsize=(16, 7), layout='constrained')
         self.fig.suptitle(self.file.split('.')[0], fontweight='demibold')
         subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 8])
         subfigs[1].get_layout_engine().set(wspace=0.1, hspace=0.1)
@@ -251,11 +251,24 @@ class ERP:
         dataframe = dataframe.rename(columns={'time':'Time', 'STI0':'Up Stimulus', 'STI1':'Down Stimulus'})
         dataframe.to_csv(csv_path, index=True)
         self.fig.savefig(png_path, facecolor=self.fig.get_facecolor(), bbox_inches='tight', pad_inches=0.2)
+        return path
+
+    def dump_plotted_data(self, path=None):
+        mne.set_log_level('ERROR')
+        averages = {}
+        up = self.up_epochs.average(picks=self.eeg_channels).to_data_frame(time_format='ms', index='time')
+        down = self.down_epochs.average(picks=self.eeg_channels).to_data_frame(time_format='ms', index='time')
+        up_names = dict(map(lambda channel: (channel, 'Up {}'.format(channel)), self.eeg_channels))
+        down_names = dict(map(lambda channel: (channel, 'Down {}'.format(channel)), self.eeg_channels))
+        up.rename(columns=up_names, inplace=True)
+        down.rename(columns=down_names, inplace=True)
+        averages = pandas.concat([up, down], axis=1)
+        averages.to_csv(os.path.join(path, 'Figure Data.csv'), index=True)
 
 
 
     def main(self):
-        self.read_csv_file()
+        # self.read_csv_file()
         print(self.read_raw_data())
         print(self.trim_raw_data())
         # self.load_serialized()
@@ -264,7 +277,9 @@ class ERP:
         print(self.find_epochs())
         self.artifact_rejection()
         self.plot_data()
-        self.dump_data()
+        folder = self.dump_data()
+        self.dump_plotted_data(folder)
+
         # self.sandbox()
 
 erp = ERP()
