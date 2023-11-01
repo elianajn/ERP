@@ -1,3 +1,4 @@
+from typing import ClassVar
 import numpy as np
 import mne
 import pickle
@@ -30,7 +31,7 @@ class ERP:
         """
         self.sample_rate = 250
         # self.file = 'demo.csv'
-        self.file = 'demo.csv'
+        self.file = '229317.txt'
         # self.eeg_channels = ['EEG1', 'EEG2', 'EEG3', 'EEG4', 'EEG5', 'EEG6', 'EEG7', 'EEG8']
         # self.eeg_channels = ['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8']
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
@@ -77,7 +78,7 @@ class ERP:
         Reads in the name of the Biosemi Data Format file
         This is isolated from reading the data so IO file input can be disabled during testing
         """
-        self.file = input("Name of the csv file (ex. demo.csv): ")
+        self.file = input("Name of the txt file (ex. demo.txt): ")
 
     def read_raw_data(self):
         """
@@ -86,18 +87,25 @@ class ERP:
         """
         # ch_names = ['Sample Index', 'EEG1', 'EEG2', 'EEG3', 'EEG4', 'EEG5', 'EEG6', 'EEG7', 'EEG8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
         # ch_names = ['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
-        ch_names = ['Sample Index', 'Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
+        new_names = ['Sample Index', 'Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2','STI0', 'STI1', 'Timestamp']
+        # new_names = {'EXG Channel 0':'ch1', 'EXG Channel 1':'ch2', 'EXG Channel 2':'ch3', 'EXG Channel 3':'ch4', 'EXG Channel 4':'ch5', 'EXG Channel 5':'ch6', 'EXG Channel 6':'ch7', 'EXG Channel 7':'ch8', 'Analog Channel 0':'A5', 'Analog Channel 1':'A6', 'Timestamp':'TimeStamp'}
+        old_names = ['Sample Index', 'EXG Channel 0', 'EXG Channel 1', 'EXG Channel 2', 'EXG Channel 3', 'EXG Channel 4', 'EXG Channel 5', 'EXG Channel 6', 'EXG Channel 7', 'Analog Channel 0', 'Analog Channel 1', 'Timestamp']
+        ch_names = {}
+        for i in range(len(old_names)):
+            ch_names[old_names[i]] = new_names[i]
         while(True):
             print('\nLoading input file...\n')
             cwd = os.getcwd()
             csv_path = '{}/{}'.format(cwd, self.file)
             try:
-                data_pd = pandas.read_csv(csv_path, sep='\t', index_col=False, engine='python', header=0, names=ch_names)
+                data_pd = pandas.read_csv(csv_path, sep=", ", header=4, index_col=False, engine='python', usecols=old_names)
+                # data_pd = pandas.read_csv(csv_path, sep='\t', index_col=False, engine='python', header=0, names=ch_names)
                 break
             except:
-                self.file = input("Unable to open file. Please confirm the name of the BCI csv file and reenter: ")
+                self.file = input("Unable to open file. Please confirm the name of the OpenBCI text file and reenter: ")
+        data_pd.rename(columns=ch_names, inplace=True)
         data_np = data_pd.to_numpy().transpose()
-        info = mne.create_info(ch_names=ch_names, sfreq=self.sample_rate)
+        info = mne.create_info(ch_names=new_names, sfreq=self.sample_rate)
         info.set_montage(None, on_missing='ignore')
         # info.set_montage('standard_1020')
         self.raw = mne.io.RawArray(data_np, info, verbose='ERROR')
@@ -115,7 +123,7 @@ class ERP:
         First drop all irrelevant channels to reduce memory usage
         TODO: error if it cannot find both sets of five
         """
-        self.raw.drop_channels(['Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'Analog Channel 2', 'Marker'])
+        # self.raw.drop_channels(['Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'Analog Channel 2', 'Marker'])
         AC0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, verbose='ERROR')
         AC1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, verbose='ERROR')
         AC0_col0 = AC0[:,0]
@@ -151,8 +159,10 @@ class ERP:
         Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
         """
         print('Finding stimuli signals...')
-        self.up_events = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
-        self.down_events = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        self.up_events = min(STI0, STI1, key=len)
+        self.down_events = max(STI0, STI1, key=len)
         self.epoch_info['Found'] = [len(self.up_events), len(self.down_events)]
         return '{} up triangles found\n{} down triangles found\n'.format(len(self.up_events), len(self.down_events))
 
@@ -176,7 +186,12 @@ class ERP:
         reject_criteria = dict(eeg=self.params['eeg_drop'])
         self.up_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
         self.down_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
-        self.epoch_info['Rejected\nEpochs\n'] = [30 - len(self.up_epochs), 173 - len(self.down_epochs)]
+        up, down = self.epoch_info['Found']
+        self.epoch_info['Rejected\nEpochs\n'] = rejUp, rejDown= [up - len(self.up_epochs), down - len(self.down_epochs)]
+        self.epoch_info['Percent\nRejected\n'] = [
+            '{:.2f}%'.format(100 * (rejUp / up)),
+            '{:.2f}%'.format(100 * (rejDown / down))
+        ]
 
     def figure_description(self, subfig, colors):
         axs = subfig.subplots(1, 4, sharex=True, sharey=True)
@@ -277,7 +292,7 @@ class ERP:
         print(self.find_epochs())
         self.artifact_rejection()
         self.plot_data()
-        folder = self.dump_data()
+        # folder = self.dump_data()
         # self.dump_plotted_data(folder)
 
         # self.sandbox()
