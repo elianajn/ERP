@@ -13,30 +13,16 @@ import sys
 import datetime
 from datetime import date
 
-""" TODO
-- Are the ends of the last flash getting caught in that? I know they're not getting considered but don't want the output to include that
-    in case someone tries to use that
-- delete sample data from /Users/ellaneurohr/mne_data
-- Add file into output folder that describes what is being output
-- Actually add montages in (ignored while creating mne.Info in read_raw_data and in plotting)
-- Read in monitor sizing and use while creating figure
-- Use Docker instead of venv
-"""
 
 class ERP:
     def __init__(self):
         """
-        UP = left = Analog Channel 0 = STI0
-        DOWN = right = Analog Channel 1 = STI1
+        
         """
         self.sample_rate = 250
         # self.file = 'demo.csv'
-        self.file = '229317.txt'
-        # self.eeg_channels = ['EEG1', 'EEG2', 'EEG3', 'EEG4', 'EEG5', 'EEG6', 'EEG7', 'EEG8']
-        # self.eeg_channels = ['EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8']
+        self.file = '7.txt'
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
-        # self.locations = {'EEG1': 'Frontal Left', 'EEG2': 'Frontal Right', 'EEG3': 'Central Left', 'EEG4': 'Central Right', 'EEG5': 'Parietal Left', 'EEG6': 'Parietal Right', 'EEG7': 'Occipital Left', 'EEG8': 'Occipital Right'}
-        # self.locations = {'EEG 1': 'Frontal Left', 'EEG 2': 'Frontal Right', 'EEG 3': 'Central Left', 'EEG 4': 'Central Right', 'EEG 5': 'Parietal Left', 'EEG 6': 'Parietal Right', 'EEG 7': 'Occipital Left', 'EEG 8': 'Occipital Right'}
         self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
         self.params = dict(
             l_freq = 1.5,
@@ -85,10 +71,7 @@ class ERP:
         Open and read the raw data file that is output from OpenBCI
         Pandas DataFrame -> np ndarray -> mne.Raw
         """
-        # ch_names = ['Sample Index', 'EEG1', 'EEG2', 'EEG3', 'EEG4', 'EEG5', 'EEG6', 'EEG7', 'EEG8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
-        # ch_names = ['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'STI0', 'STI1', 'Analog Channel 2', 'Timestamp', 'Marker']
         new_names = ['Sample Index', 'Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2','STI0', 'STI1', 'Timestamp']
-        # new_names = {'EXG Channel 0':'ch1', 'EXG Channel 1':'ch2', 'EXG Channel 2':'ch3', 'EXG Channel 3':'ch4', 'EXG Channel 4':'ch5', 'EXG Channel 5':'ch6', 'EXG Channel 6':'ch7', 'EXG Channel 7':'ch8', 'Analog Channel 0':'A5', 'Analog Channel 1':'A6', 'Timestamp':'TimeStamp'}
         old_names = ['Sample Index', 'EXG Channel 0', 'EXG Channel 1', 'EXG Channel 2', 'EXG Channel 3', 'EXG Channel 4', 'EXG Channel 5', 'EXG Channel 6', 'EXG Channel 7', 'Analog Channel 0', 'Analog Channel 1', 'Timestamp']
         ch_names = {}
         for i in range(len(old_names)):
@@ -171,15 +154,17 @@ class ERP:
         Isolate the up and down triangle epochs (0.3 seconds before stim signal to 0.7 seconds after)
         TODO may be good to delete the raw data after getting this
         """
-        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
-        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
+        # self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
+        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR', preload=True)
+        # self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
+        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR', preload=True)
         return 'Epochs isolated\n'
 
     def filter_raw_data(self):
         """
         Bandpass filter from 2 - 10 Hz
         """
-        self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
+        self.raw = self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
         # self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels)
 
     def artifact_rejection(self):
@@ -236,7 +221,12 @@ class ERP:
                 subplot = axs[1][i-4]
             else:
                 subplot = axs[0][i]
-            mne.viz.plot_compare_evokeds(evokeds, picks=[channel], axes=subplot, show=False, legend=False, title=self.locations[channel], colors=colors, show_sensors=False)[0]
+            # mne.viz.plot_compare_evokeds(dict(
+            #     up = list(self.up_epochs.copy().pick(channel).iter_evoked()),
+            #     down = list(self.down_epochs.copy().pick(channel).iter_evoked())
+            # ), 
+            # picks=channel, axes=subplot, show=False, legend=False, title=self.locations[channel], colors=colors, show_sensors=False)[0]
+            mne.viz.plot_compare_evokeds(evokeds, picks=channel, axes=subplot, show=False, legend=False, title=self.locations[channel], colors=colors, show_sensors=False)[0]
         plt.show()
         closeText.set_text('')
 
@@ -270,14 +260,19 @@ class ERP:
 
     def dump_plotted_data(self, path=None):
         mne.set_log_level('ERROR')
-        averages = {}
-        up = self.up_epochs.average(picks=self.eeg_channels).to_data_frame(time_format='ms', index='time')
-        down = self.down_epochs.average(picks=self.eeg_channels).to_data_frame(time_format='ms', index='time')
-        up_names = dict(map(lambda channel: (channel, 'Up {}'.format(channel)), self.eeg_channels))
-        down_names = dict(map(lambda channel: (channel, 'Down {}'.format(channel)), self.eeg_channels))
-        up.rename(columns=up_names, inplace=True)
-        down.rename(columns=down_names, inplace=True)
-        averages = pandas.concat([up, down], axis=1)
+        averages = pandas.DataFrame()
+        # up = self.up_epochs.average(picks='Fp2')
+        # down = self.down_epochs.average(picks='Fp2')
+        # mne.viz.plot_compare_evokeds(dict(up=up, down=down), show=True, show_sensors=False)
+        # up.plot(picks='Fp1', show=True)
+        for channel in ['C3', 'C4', 'P7', 'P8']:
+            up = self.up_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
+            down = self.down_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
+            up.rename(columns={channel : 'Up {}'.format(channel)}, inplace=True)
+            down.rename(columns={channel : 'Down {}'.format(channel)}, inplace=True)
+            ch_avg = pandas.concat([up, down], axis=1)
+            averages = pandas.concat([averages, ch_avg], axis=1)
+        print(averages)
         averages.to_csv(os.path.join(path, 'Figure Data.csv'), index=True)
 
 
@@ -292,8 +287,9 @@ class ERP:
         print(self.find_epochs())
         self.artifact_rejection()
         self.plot_data()
-        # folder = self.dump_data()
-        # self.dump_plotted_data(folder)
+        folder = self.dump_data()
+        self.dump_plotted_data(folder)
+        # self.dump_plotted_data()
 
         # self.sandbox()
 
