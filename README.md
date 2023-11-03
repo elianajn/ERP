@@ -1,58 +1,60 @@
-# Triangle ERP Experiment <!-- omit in toc -->
+# **Triangle ERP Experiment** <!-- omit in toc -->
 #### ***By Eliana Neurohr*** <!-- omit in toc -->  
 
 > ***Note***: *This ReadMe is a work in progress, your patience is appreciated*
   
-![](output_demo/demo.png)
+<!-- ![](output_demo/demo.png) -->
 <!-- no toc -->
 ## **Table of Contents** <!-- omit in toc -->
 - [**Dependencies**](#dependencies)
-- [**Neurophysiology Student Instructions**](#neurophysiology-student-instructions)
+- [**Instructions**](#instructions)
   - [**Downloading the Code**](#downloading-the-code)
-  - [**Starting Virtual Environment**](#starting-virtual-environment)
+  - [**Creating and Starting the Conda Environment**](#creating-and-starting-the-conda-environment)
+    - [**Mac Instructions**](#mac-instructions)
+    - [**Windows Instructions**](#windows-instructions)
   - [**Running the Program**](#running-the-program)
+  - [**CC Neurophysiology Student Instructions**](#cc-neurophysiology-student-instructions)
 - [**EEG Filtering**](#eeg-filtering)
 - [**Artifact Rejection**](#artifact-rejection)
 - [**References**](#references)
 
 ## **Dependencies**
-- [mne](https://mne.tools/stable/index.html); full citation below
-- [pandas](https://pandas.pydata.org/)
-- [numpy](https://numpy.org/)
-- [matplotlib](https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html)
-- [datetime](https://docs.python.org/3/library/datetime.html)
-- [pickle](https://docs.python.org/3/library/pickle.html)
-  - included in Python 3.9.* ; not used in main experiment but useful for testing
-- [os](https://docs.python.org/3/library/os.html)
+- [Anaconda](https://www.anaconda.com/download)
+- Dependencies in Anaconda environment.yml (installation not required)
+  - Python
+  - [mne](https://mne.tools/stable/index.html); full citation below
+  - [pandas](https://pandas.pydata.org/)
+  - [numpy](https://numpy.org/)
+  - [matplotlib](https://matplotlib.org/3.5.3/api/_as_gen/matplotlib.pyplot.html)
+  - [datetime](https://docs.python.org/3/library/datetime.html)
 
-
-## **Neurophysiology Student Instructions**
-This experiment requires Python 3 to be installed. If you do not have Python 3 please download [here](https://www.python.org/downloads/).
-
-***Note**: The $ before a line which you type into the terminal is not actually typed out in the terminal. This is just to signifiy that the line is to be inputed into the terminal*
-
-**If you are doing this experiment on one of the lab computers, skip to [*Starting Virtual Environment*](#starting-virtual-environment)**
-****
-### **Downloading the Code**
+## **Instructions**  
+You need Anaconda downloaded and installed to run this program. Please [download](https://www.anaconda.com/download) if you do not have it already before proceeding. 
+### **Downloading the Code**  
 1. Click the green button that says "Code"
 2. Click download zip and extract to a location like your Desktop
-### **Starting Virtual Environment**
-A virtual environment is an environment which can have modules that code needs without having those dependencies installed on your machine.  
+  
+### **Creating and Starting the Conda Environment**  
+***Note**: The $ before a line which you type into the terminal is not actually typed out in the terminal. This is just to signifiy that the line is to be inputed into the terminal*
+#### **Mac Instructions**
+1. Control/right click the ERP folder you just extracted. Hold Option and click "Copy ERP as Pathname"
+2. Open a terminal window
+3. 
+  ```
+  $ cd <paste pathname you just copied>
+  $ conda env create -f environment.yml
+  $ conda activate ERP_env
+  ```
+#### **Windows Instructions**
+<mark>TODO</mark>
 
-Open the Terminal on your computer. Lab computer instructions:
-   ```
-   $ cd Desktop/ERPLab/
-   $ source venv/bin/activate
-   ```
-   You should see (venv) appear at the far left of the command line now.
-### **Running the Program**
-First, make sure that the .txt file of the EEG data has been moved into the ERP folder. It is highly recommended that you rename the text file to something more succinct with no spaces, but leave the .txt extension. 
-```
-(venv) $ python triangles_experiment.py
-```
-You will be prompted to enter the name of the .txt file with the EEG data. You may also try the demo.txt file.
-The output CSV and image will be saved in a folder within the ERP folder once the window with the graphs that pops up is closed
+### **Running the Program**  
+
+### **CC Neurophysiology Student Instructions**
+
+
 ## **EEG Filtering**
+<mark>TODO</mark>
 1. 0.5 - 30 Hz Bandpass filter before epochs are isolated
 2. Perform artifact correction # NOT DONE
 3. Isolate epochs and perform baseline correction (baseline correction not done)
@@ -63,10 +65,12 @@ The output CSV and image will be saved in a folder within the ERP folder once th
     *"You may want to apply a low-pass filter (e.g., half amplitude cutoff = 30 Hz, slope = 12-24 dB/octave) before plotting so that you can see the data more clearly."*
 
 ## **Artifact Rejection**
+<mark>TODO</mark>
 Artifacts are parts of the recorded signal that arise from sources other than the source of interest (i.e., neuronal activity in the brain)
 https://mne.tools/dev/auto_tutorials/preprocessing/10_preprocessing_overview.html
 
 
 ## **References**
+<mark>TODO</mark>
 Experiment inspired by https://docs.openbci.com/Examples/VideoExperiment/  
 Code inspiration: https://github.com/OpenBCI/OpenBCI_Experiment
