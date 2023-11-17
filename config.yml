@@ -1,0 +1,24 @@
+# DO NOT edit the variable names, as doing so will throw an error
+
+# Sample Rate
+sample_rate : 250
+
+# Time cutoffs (in seconds) before and after a stimulus event
+t_min : -0.3
+t_max : 0.7
+
+# Bandpass filter parameters (Hz)
+# For more information about filtering parameters, see https://mne.tools/stable/generated/mne.io.Raw.html#mne.io.Raw.filter
+lower_passband_edge : 1.5
+upper_passband_edge : 8.0
+
+# Epoch rejection parameter (V)
+# For more information about epoch rejection paramters, see https://mne.tools/stable/generated/mne.Epochs.html#mne.Epochs.drop_bad
+epoch_rejection_threshold : 225
+
+# Logging level
+# The verbosity of messages to print. It can be either DEBUG, INFO, WARNING, ERROR, or CRITICAL
+log_level : ERROR
+
+# True/False if you want the resulting csv files and figure to be output to a new folder within the ERP folder
+output_results: False

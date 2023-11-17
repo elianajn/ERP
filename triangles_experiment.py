@@ -1,4 +1,3 @@
-from typing import ClassVar
 import numpy as np
 import mne
 import pickle
@@ -10,27 +9,32 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 import pandas
 import os
 import sys
+import traceback
 import datetime
 from datetime import date
+import yaml
 
 
 class ERP:
     def __init__(self):
         """
-        
+        TODO set log level everywhere
         """
-        self.sample_rate = 250
-        # self.file = 'demo.csv'
-        self.file = '7.txt'
+        self.sample_rate = None
+        self.log_level = None
+        self.output_results = None
+        self.file = 'demo.txt'
+        # self.file = '7.txt'
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
         self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
-        self.params = dict(
-            l_freq = 1.5,
-            h_freq = 8,
-            t_min = -0.3,
-            t_max = 0.7,
-            eeg_drop = 225
-        )
+        # self.params = dict(
+        #     lower_passband_edge = 1.5,
+        #     upper_passband_edge = 8,
+        #     t_min = -0.3,
+        #     t_max = 0.7,
+        #     epoch_rejection_threshold = 225
+        # )
+        self.params = None
         self.raw = None
         self.up_events = None
         self.down_events = None
@@ -59,12 +63,55 @@ class ERP:
         self.raw = pickle.load(open('data.p', 'rb'))
         print('Raw data loaded from serialized object\n')
 
+    def load_config(self):
+        """
+        Read parameters from YAML file
+        """
+        print('Loading parameters from config.yml...')
+        with open('config.yml', 'r') as yamlfile:
+            data = yaml.load(yamlfile, Loader=yaml.FullLoader)
+        default = {'sample_rate': 250, 't_min': -0.3, 't_max': 0.7, 'lower_passband_edge': 1.5, 'upper_passband_edge': 8.0, 'epoch_rejection_threshold': 225, 'log_level': 'ERROR', 'output_results': True}
+        if data == default:
+            txt = 'Default parameters loaded from configuration file'
+            self.params = default
+        else:
+            self.params = data
+            txt = 'Using user defined parameters'
+        col_width = 30
+        table = [
+            '',
+            ''.center(col_width*2 + 3, '-'),
+            '|' + txt.center(col_width*2 + 1) + '|',
+            '|' + 'Edit these in config.yml'.center(col_width*2 + 1) + '|',
+            ''.center(col_width*2 + 3, '-')
+        ]
+        units = {'sample_rate': 'Hz', 't_min': 'sec', 't_max': 'sec', 'lower_passband_edge': 'Hz', 'upper_passband_edge': 'Hz', 'epoch_rejection_threshold': 'µV', 'log_level': '', 'output_results': ''}
+        try:
+            for key in self.params:
+                table.append(
+                    '|' + '{}'.format(key.replace('_',' ')).center(col_width) +
+                    '|' + '{} {}'.format(self.params[key], units[key]).center(col_width) + '|'
+                )
+        except KeyError as err:
+            print(
+                '\nUh Oh! The variable name {} is not valid. Please ensure that the variables in config.yml match these names:\n'.format(traceback.format_exception_only(err)[0].split('\'')[1]) +
+                ('\t{}\n'*len(default)).format(*default.keys()) + 
+                '\nProgram exiting.\n'
+            )
+            sys.exit()
+        table.append(''.center(col_width*2 + 3, '-'))
+        table.append('')
+        self.sample_rate = self.params.pop('sample_rate')
+        self.log_level = self.params.pop('log_level')
+        return '\n'.join(table)
+
+
     def read_csv_file(self):
         """
         Reads in the name of the Biosemi Data Format file
         This is isolated from reading the data so IO file input can be disabled during testing
         """
-        self.file = input("Name of the txt file (ex. demo.txt): ")
+        self.file = input("Enter the name of the txt file (ex. demo.txt): ")
 
     def read_raw_data(self):
         """
@@ -89,6 +136,7 @@ class ERP:
         data_pd.rename(columns=ch_names, inplace=True)
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=new_names, sfreq=self.sample_rate)
+        mne.set_log_level(self.log_level)
         info.set_montage(None, on_missing='ignore')
         # info.set_montage('standard_1020')
         self.raw = mne.io.RawArray(data_np, info, verbose='ERROR')
@@ -134,20 +182,31 @@ class ERP:
         self.raw.crop(lastFirstTime, firstLastTime)
         seconds = self.raw.n_times / self.sample_rate
         total = str(datetime.timedelta(seconds=seconds))
-        return 'Data trimmed to relevant timeframe.\nLength of analyzed data: {}\nExpected length of analyzed data: 03:46:2\n'.format(total)
+        justified = 'Length of analyzed data: '.ljust(35)
+        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  03:46:2\n'.format(justified, total)
 
     def find_stimuli(self):
         """
+        TODO: demo.txt finding extra down!!!
         Find the events in the two stimuli channels that indicate that a triangle was displayed
         Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
         """
         print('Finding stimuli signals...')
-        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
-        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='DEBUG')
+        # STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='DEBUG')
+        # STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
         self.up_events = min(STI0, STI1, key=len)
         self.down_events = max(STI0, STI1, key=len)
         self.epoch_info['Found'] = [len(self.up_events), len(self.down_events)]
-        return '{} up triangles found\n{} down triangles found\n'.format(len(self.up_events), len(self.down_events))
+        up_info = 'Up triangles found: {}'.format(len(self.up_events)).ljust(30)
+        down_info = 'Down triangles found: {}'.format(len(self.down_events)).ljust(30)
+        if len(self.up_events) != 30 or len(self.down_events) != 173:
+            print('\nWARNING: Unexpected number of events found. Please ensure that the light sensors are well secured with dark tape')
+            up_info = '\t{}Expected: 30'.format(up_info)
+            down_info = '\t{}Expected: 173'.format(down_info)
+        return '{}\n{}\n'.format(up_info, down_info)
+        # return 'Up triangles found: {}{}\nDown triangles found: {}{}\n'.format(len(self.up_events), up_warn, len(self.down_events), down_warn)
 
     def find_epochs(self):
         """
@@ -164,11 +223,12 @@ class ERP:
         """
         Bandpass filter from 2 - 10 Hz
         """
-        self.raw = self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
+        self.raw = self.raw.filter(l_freq=self.params['lower_passband_edge'], h_freq=self.params['upper_passband_edge'], picks=self.eeg_channels)
+        # self.raw = self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
         # self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels)
 
     def artifact_rejection(self):
-        reject_criteria = dict(eeg=self.params['eeg_drop'])
+        reject_criteria = dict(eeg=self.params['epoch_rejection_threshold'])
         self.up_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
         self.down_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
         up, down = self.epoch_info['Found']
@@ -188,9 +248,9 @@ class ERP:
         triangle_data = pandas.DataFrame(self.epoch_info)
         axs[2].table(cellText=triangle_data.values, colLabels=triangle_data.columns, rowLabels=['UP', 'DOWN'], rowLoc='right', loc='lower right', cellLoc='center', edges='open')
         params = pandas.DataFrame({'Column 1':[
-            '{} Hz'.format(self.params['l_freq']),
-            '{} Hz'.format(self.params['h_freq']),
-            '{} µV'.format(self.params['eeg_drop']),
+            '{} Hz'.format(self.params['lower_passband_edge']),
+            '{} Hz'.format(self.params['upper_passband_edge']),
+            '{} µV'.format(self.params['epoch_rejection_threshold']),
             '{} Hz'.format(self.sample_rate)]
         }, index=['Lower Cutoff', 'Upper Cutoff', 'Reject Threshold', 'Sample Rate'])
         paramTable = axs[3].table(cellText=params.values, rowLabels=params.index, loc='lower center', rowLoc='right', cellLoc='center', edges='open')
@@ -272,13 +332,13 @@ class ERP:
             down.rename(columns={channel : 'Down {}'.format(channel)}, inplace=True)
             ch_avg = pandas.concat([up, down], axis=1)
             averages = pandas.concat([averages, ch_avg], axis=1)
-        print(averages)
         averages.to_csv(os.path.join(path, 'Figure Data.csv'), index=True)
 
 
 
     def main(self):
-        self.read_csv_file()
+        print(self.load_config())
+        # self.read_csv_file()
         print(self.read_raw_data())
         print(self.trim_raw_data())
         # self.load_serialized()
@@ -287,9 +347,10 @@ class ERP:
         print(self.find_epochs())
         self.artifact_rejection()
         self.plot_data()
-        folder = self.dump_data()
-        self.dump_plotted_data(folder)
-        # self.dump_plotted_data()
+        if self.output_results:
+            folder = self.dump_data()
+            self.dump_plotted_data(folder)
+            self.dump_plotted_data()
 
         # self.sandbox()
 
