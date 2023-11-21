@@ -23,7 +23,7 @@ class ERP:
         self.sample_rate = None
         self.log_level = None
         self.output_results = None
-        self.file = 'demo.txt'
+        self.file = 'open.txt'
         # self.file = '7.txt'
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
         self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
@@ -48,9 +48,13 @@ class ERP:
         """
         Used while developing and debugging; will be removed
         """
-        up_evoked = self.up_epochs.average(self.eeg_channels)
-        down_evoked = self.down_epochs.average(self.eeg_channels)
-        print(type(up_evoked))
+        up = self.up_epochs.average()
+        # up.plot_joint(show=True, title='Up')
+        self.up_epochs.average().plot_topomap(show=True, times=[-0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
+        plt.show()
+        # up_evoked = self.up_epochs.average(self.eeg_channels)
+        # down_evoked = self.down_epochs.average(self.eeg_channels)
+        # print(type(up_evoked))
 
 
     def serialize(self, data):
@@ -103,6 +107,7 @@ class ERP:
         table.append('')
         self.sample_rate = self.params.pop('sample_rate')
         self.log_level = self.params.pop('log_level')
+        self.output_results = self.params.pop('output_results')
         return '\n'.join(table)
 
 
@@ -137,11 +142,12 @@ class ERP:
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=new_names, sfreq=self.sample_rate)
         mne.set_log_level(self.log_level)
-        info.set_montage(None, on_missing='ignore')
+        # info.set_montage(None, on_missing='ignore')
         # info.set_montage('standard_1020')
-        self.raw = mne.io.RawArray(data_np, info, verbose='ERROR')
+        self.raw = mne.io.RawArray(data_np, info)
         channel_types = dict.fromkeys(self.eeg_channels, 'eeg')
         self.raw.set_channel_types(channel_types, on_unit_change='ignore') #TODO: make sure weird shit isnt happening
+        self.raw.set_montage('standard_1020')
         total = str(datetime.timedelta(seconds=self.raw.n_times / self.sample_rate))
         return 'Input file loaded succesfully\nTotal length of recording: {}\n'.format(total)
         # self.serialize(self.raw)
@@ -155,8 +161,8 @@ class ERP:
         TODO: error if it cannot find both sets of five
         """
         # self.raw.drop_channels(['Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'Analog Channel 2', 'Marker'])
-        AC0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, verbose='ERROR')
-        AC1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, verbose='ERROR')
+        AC0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False)
+        AC1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False)
         AC0_col0 = AC0[:,0]
         AC1_col0 = AC1[:,0]
         mask = np.isclose(AC0_col0[:,None], AC1_col0, atol=15)
@@ -192,10 +198,8 @@ class ERP:
         Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
         """
         print('Finding stimuli signals...')
-        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='DEBUG')
-        # STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
-        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='DEBUG')
-        # STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, verbose='ERROR')
+        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate)
+        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate)
         self.up_events = min(STI0, STI1, key=len)
         self.down_events = max(STI0, STI1, key=len)
         self.epoch_info['Found'] = [len(self.up_events), len(self.down_events)]
@@ -214,14 +218,14 @@ class ERP:
         TODO may be good to delete the raw data after getting this
         """
         # self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
-        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR', preload=True)
+        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         # self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
-        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR', preload=True)
+        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         return 'Epochs isolated\n'
 
     def filter_raw_data(self):
         """
-        Bandpass filter from 2 - 10 Hz
+        Bandpass FIR filter
         """
         self.raw = self.raw.filter(l_freq=self.params['lower_passband_edge'], h_freq=self.params['upper_passband_edge'], picks=self.eeg_channels)
         # self.raw = self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
@@ -229,8 +233,8 @@ class ERP:
 
     def artifact_rejection(self):
         reject_criteria = dict(eeg=self.params['epoch_rejection_threshold'])
-        self.up_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
-        self.down_epochs.drop_bad(reject=reject_criteria, verbose='ERROR')
+        self.up_epochs.drop_bad(reject=reject_criteria)
+        self.down_epochs.drop_bad(reject=reject_criteria)
         up, down = self.epoch_info['Found']
         self.epoch_info['Rejected\nEpochs\n'] = rejUp, rejDown= [up - len(self.up_epochs), down - len(self.down_epochs)]
         self.epoch_info['Percent\nRejected\n'] = [
@@ -293,7 +297,6 @@ class ERP:
     def dump_data(self):
         """ Create an output folder and dump the csv and figure into it
         If another folder with that name exists this will create a folder with the date and time appended to the folder name
-        TODO: he needed another kind of data dumped oout...
         """
         input_file = self.file.split('.')[0]
         cwd = os.getcwd()
@@ -319,13 +322,13 @@ class ERP:
         return path
 
     def dump_plotted_data(self, path=None):
-        mne.set_log_level('ERROR')
+        """
+        Output the average (either up or down, same as the plotted data) of all all epochs for each channel into to a csv
+        Useful for further analysis of average peaks in Excel
+        """
+        # mne.set_log_level('ERROR')
         averages = pandas.DataFrame()
-        # up = self.up_epochs.average(picks='Fp2')
-        # down = self.down_epochs.average(picks='Fp2')
-        # mne.viz.plot_compare_evokeds(dict(up=up, down=down), show=True, show_sensors=False)
-        # up.plot(picks='Fp1', show=True)
-        for channel in ['C3', 'C4', 'P7', 'P8']:
+        for channel in self.eeg_channels:
             up = self.up_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
             down = self.down_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
             up.rename(columns={channel : 'Up {}'.format(channel)}, inplace=True)
@@ -334,25 +337,37 @@ class ERP:
             averages = pandas.concat([averages, ch_avg], axis=1)
         averages.to_csv(os.path.join(path, 'Figure Data.csv'), index=True)
 
+    def epoch_drop_fig(self):
+        """
+        TODO: confirm averaging done in dump plotted data doesn't do it in place
+        """
+        fig = plt.figure()
+
+
 
 
     def main(self):
         print(self.load_config())
-        # self.read_csv_file()
+        self.read_csv_file()
         print(self.read_raw_data())
+        # fig = self.raw.plot_sensors(show_names=True, block=True)
+        # cwd = os.getcwd()
+        # fig_path = os.path.join(cwd, 'montage.png')
+        # fig.savefig(fig_path)
+        # return
         print(self.trim_raw_data())
         # self.load_serialized()
         self.filter_raw_data()
         print(self.find_stimuli())
         print(self.find_epochs())
         self.artifact_rejection()
+        # self.sandbox()
+        # self.dump_plotted_data()
         self.plot_data()
         if self.output_results:
             folder = self.dump_data()
             self.dump_plotted_data(folder)
-            self.dump_plotted_data()
 
-        # self.sandbox()
 
 erp = ERP()
 erp.main()
