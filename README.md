@@ -61,16 +61,6 @@ You need Anaconda downloaded and installed to run this program. Please [download
 5. *Since the displayed plot is generated using epochs in order to display the confidence band, epochs are later converted into evoked (averaged epochs) in order to output plotted data to a csv*
 
 
-<mark>TODO</mark>
-1. 0.5 - 30 Hz Bandpass filter before epochs are isolated
-2. Perform artifact correction # NOT DONE
-3. Isolate epochs and perform baseline correction (baseline correction not done)
-4. Artifact rejection  
-   *"Many systems require that you perform artifact after epoching, so I have put this step after epoching.  However, it works just as well to perform artifact rejection on the continuous EEG, prior to epoching, if your system allows it."*
-5. Average the single-trial EEG epochs to create single-subject averaged ERP waveforms
-6. Plot ERP waveforms  
-    *"You may want to apply a low-pass filter (e.g., half amplitude cutoff = 30 Hz, slope = 12-24 dB/octave) before plotting so that you can see the data more clearly."*
-
 ## **Artifact Rejection**
 <mark>TODO</mark>  
 Artifacts are parts of the recorded signal that arise from sources other than the source of interest (i.e., neuronal activity in the brain). These can be caused by a variety of factors, such as electromagnetic field noise from nearby elevators or cell phones, instrument/sensor variation or manlfunctions, or natural biological occurences which cause electrical fluctuations in the brain such as heartbeats, blinks, eye movement, or swallowing.<sup>1</sup>  
@@ -79,7 +69,7 @@ While artifacts can be rejected or repaired in continous data, it is standard pr
 
 
 ## **References**
-<mark>TODO</mark>
+<mark>TODO</mark>  
 Experiment inspired by https://docs.openbci.com/Examples/VideoExperiment/  
 Code inspiration: https://github.com/OpenBCI/OpenBCI_Experiment
 
