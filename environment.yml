@@ -13,3 +13,4 @@ dependencies:
     - mne==1.5.1
     - datetime
     - pyyaml
+    - screeninfo

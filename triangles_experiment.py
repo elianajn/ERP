@@ -1,18 +1,23 @@
-import numpy as np
-import mne
-import pickle
-import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
-import matplotlib.table as mtable
-import matplotlib.gridspec as gridspec
-from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-import pandas
 import os
 import sys
 import traceback
 import datetime
 from datetime import date
 import yaml
+from screeninfo import get_monitors
+import numpy as np
+import mne
+import pickle
+import matplotlib
+matplotlib.use('QtAgg')
+import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+import matplotlib.table as mtable
+import matplotlib.gridspec as gridspec
+# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+# import tkinter as tk
+
+import pandas
 
 
 class ERP:
@@ -119,6 +124,7 @@ class ERP:
         """
         self.file = input("Enter the name of the txt file (ex. demo.txt): ")
 
+
     def read_raw_data(self):
         """
         Open and read the raw data file that is output from OpenBCI
@@ -140,6 +146,7 @@ class ERP:
             except:
                 self.file = input("Unable to open file. Please confirm the name of the OpenBCI text file and reenter: ")
         data_pd.rename(columns=ch_names, inplace=True)
+        data_pd[self.eeg_channels] *= -1
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=new_names, sfreq=self.sample_rate)
         mne.set_log_level(self.log_level)
@@ -190,7 +197,7 @@ class ERP:
         seconds = self.raw.n_times / self.sample_rate
         total = str(datetime.timedelta(seconds=seconds))
         justified = 'Length of analyzed data: '.ljust(35)
-        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  03:46:2\n'.format(justified, total)
+        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  0:03:46.2\n'.format(justified, total)
 
     def find_stimuli(self):
         """
@@ -253,28 +260,27 @@ class ERP:
         ]
 
     def figure_description(self, subfig, colors):
-        axs = subfig.subplots(1, 4, sharex=True, sharey=True)
+        axs = subfig.subplots(1, 3, sharex=True, sharey=False, width_ratios=[2, 1, 1])
         for ax in axs:
             ax.set_axis_off()
         up_patch = mpatches.Patch(color=colors['up'], label='Up Triangles')
         down_patch = mpatches.Patch(color=colors['down'], label='Down Triangles')
-        axs[0].legend(handles=[up_patch, down_patch],loc='lower left')
+        subfig.legend(handles=[up_patch, down_patch],loc='lower left')
         triangle_data = pandas.DataFrame(self.epoch_info)
-        axs[2].table(cellText=triangle_data.values, colLabels=triangle_data.columns, rowLabels=['UP', 'DOWN'], rowLoc='right', loc='lower right', cellLoc='center', edges='open')
+        axs[1].table(cellText=triangle_data.values, colLabels=triangle_data.columns, rowLabels=['UP', 'DOWN'], rowLoc='right', loc='right', cellLoc='center', edges='open')
         params = pandas.DataFrame({'Column 1':[
             '{} Hz'.format(self.params['lower_passband_edge']),
             '{} Hz'.format(self.params['upper_passband_edge']),
             '{} µV'.format(self.params['epoch_rejection_threshold']),
             '{} Hz'.format(self.sample_rate)]
         }, index=['Lower Cutoff', 'Upper Cutoff', 'Reject Threshold', 'Sample Rate'])
-        paramTable = axs[3].table(cellText=params.values, rowLabels=params.index, loc='lower center', rowLoc='right', cellLoc='center', edges='open')
+        paramTable = axs[2].table(cellText=params.values, rowLabels=params.index, loc='center', rowLoc='right', cellLoc='center', edges='open')
         paramTable.auto_set_column_width(0)
         
 
     def plot_data(self):
         """
-        TODO montages
-        TODO adjust sizing
+        GTAGG
         """
         print('Plotting data...\n')
         evokeds = dict(
@@ -282,27 +288,36 @@ class ERP:
             down=list(self.down_epochs.iter_evoked()),
         )
         colors = {'up': 'tab:orange', 'down': 'tab:blue'}
-        self.fig = plt.figure('Figures', figsize=(16, 7), layout='constrained')
+        primary_monitor = get_monitors()[0]
+        screen_width, screen_height = primary_monitor.width, primary_monitor.height
+        fig_width = (screen_width // 100) * 100
+        fig_height = fig_width // 2
+        diff_width, diff_height = (screen_width - fig_width) // 2, (screen_height - fig_height) // 2
+        figsize = (screen_width // 100, screen_width // 200) #TODO: delete?
+        self.fig = plt.figure('Averaged Channels', layout='constrained')
         self.fig.suptitle(self.file.split('.')[0], fontweight='demibold')
-        subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 8])
+        mngr = plt.get_current_fig_manager()
+        mngr.window.setGeometry(diff_width, 0, fig_width, fig_height) # X, Y, width, height
+        txt = 'Close this window to finish running the program.'
+        closeText = self.fig.text(x=0.005, y=0.965,s=txt, fontstyle='italic')
+        subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 8], hspace=0.05) #TODO maybe dont want hspace
         subfigs[1].get_layout_engine().set(wspace=0.1, hspace=0.1)
         axs = subfigs[1].subplots(2, 4)
         self.figure_description(subfigs[0], colors)
-        txt = 'Close this window to finish running the program.'
-        closeText = self.fig.text(x=0.005, y=0.965,s=txt, fontstyle='italic')
+        ticks = [x / 10 for x in range(int(self.params['t_min'] * 10) + 1, int(self.params['t_max'] * 10) + 1, 2)]
         for i, channel in enumerate(self.eeg_channels):
             if i >= 4:
                 subplot = axs[1][i-4]
             else:
                 subplot = axs[0][i]
-            # mne.viz.plot_compare_evokeds(dict(
-            #     up = list(self.up_epochs.copy().pick(channel).iter_evoked()),
-            #     down = list(self.down_epochs.copy().pick(channel).iter_evoked())
-            # ), 
-            # picks=channel, axes=subplot, show=False, legend=False, title=self.locations[channel], colors=colors, show_sensors=False)[0]
-            mne.viz.plot_compare_evokeds(evokeds, picks=channel, axes=subplot, show=False, legend=False, title=self.locations[channel], colors=colors, show_sensors=False)[0]
+            subplot.set_xticks(ticks)
+            subplot.ticklabel_format(axis='y', style='scientific', scilimits=[0, 0])
+            mne.viz.plot_compare_evokeds(evokeds, picks=channel, axes=subplot, show=False, legend=False, 
+                                            title=self.locations[channel], colors=colors, show_sensors=False,
+                                            truncate_xaxis=False, truncate_yaxis=False)[0]
         plt.show()
         closeText.set_text('')
+
 
     def dump_data(self):
         """ Create an output folder and dump the csv and figure into it
@@ -358,7 +373,7 @@ class ERP:
 
     def main(self):
         print(self.load_config())
-        self.read_csv_file()
+        # self.read_csv_file()
         print(self.read_raw_data())
         # fig = self.raw.plot_sensors(show_names=True, block=True)
         # cwd = os.getcwd()
