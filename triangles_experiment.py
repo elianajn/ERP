@@ -32,13 +32,6 @@ class ERP:
         # self.file = '7.txt'
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
         self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
-        # self.params = dict(
-        #     lower_passband_edge = 1.5,
-        #     upper_passband_edge = 8,
-        #     t_min = -0.3,
-        #     t_max = 0.7,
-        #     epoch_rejection_threshold = 225
-        # )
         self.params = None
         self.raw = None
         self.up_events = None
@@ -191,23 +184,28 @@ class ERP:
         if len(signalFlashes) != 10:
             print('Uh Oh! Didn\'t find the signal flahes. Exiting program.') #TODO: actually throw error here!
             sys.exit()
-        lastFirstTime = (signalFlashes[4][0] + 1) / self.sample_rate
-        firstLastTime = (signalFlashes[5][0] -1) / self.sample_rate
-        self.raw.crop(lastFirstTime, firstLastTime)
+        # lastFirstTime = (signalFlashes[4][0] + 5) / self.sample_rate
+        # firstLastTime = (signalFlashes[5][0] - 5) / self.sample_rate
+        # self.raw.crop(lastFirstTime, firstLastTime)
+        firstSignal = (signalFlashes[0][0]) / self.sample_rate
+        secondSignal = (signalFlashes[-1][0]) / self.sample_rate
+        self.raw.crop(firstSignal, secondSignal)
         seconds = self.raw.n_times / self.sample_rate
         total = str(datetime.timedelta(seconds=seconds))
         justified = 'Length of analyzed data: '.ljust(35)
-        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  0:03:46.2\n'.format(justified, total)
+        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  0:03:46.2\n'.format(justified, total) #TODO change this if you keep the cropping to include signal flashes
 
     def find_stimuli(self):
         """
-        TODO: demo.txt finding extra down!!!
+        TODO: demo.txt finding extra down!!! - it was at the end
         Find the events in the two stimuli channels that indicate that a triangle was displayed
         Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
         """
         print('Finding stimuli signals...')
-        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate)
-        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate)
+        STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, initial_event=True)[5:-5]
+        STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, initial_event=True)[5:-5]
+        # STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate)
+        # STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate)
         self.up_events = min(STI0, STI1, key=len)
         self.down_events = max(STI0, STI1, key=len)
         self.epoch_info['Found'] = [len(self.up_events), len(self.down_events)]
@@ -220,16 +218,16 @@ class ERP:
         return '{}\n{}\n'.format(up_info, down_info)
         # return 'Up triangles found: {}{}\nDown triangles found: {}{}\n'.format(len(self.up_events), up_warn, len(self.down_events), down_warn)
 
+
     def find_epochs(self):
         """
         Isolate the up and down triangle epochs (0.3 seconds before stim signal to 0.7 seconds after)
         TODO may be good to delete the raw data after getting this
         """
-        # self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
         self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
-        # self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], verbose='ERROR')
         self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         return 'Epochs isolated\n'
+
 
     def filter_raw_data(self):
         """
