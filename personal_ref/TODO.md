@@ -19,6 +19,7 @@
 - [x] Invert values (not just how thet are displayed)
 - [ ] Expand/proofread method documentation
 - [ ] Clean up commented code
+- [ ] Github badges?
 
 ## **Citations**
 Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
