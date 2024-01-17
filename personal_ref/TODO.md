@@ -12,6 +12,9 @@
 - [X] Read in OpenBCI text file instead of CSV
 - [ ] Dial in ReadMe
   - [ ] Citations
+  - [ ] Introduction
+  - [ ] Windows instructions
+  - [ ] Page about OpenBCI and headset configuration
 - [ ] Assign epochs indexing based on type (up/down)
 - [x] Invert values (not just how thet are displayed)
 - [ ] Expand/proofread method documentation
