@@ -22,4 +22,4 @@ rejection_log_level: ERROR
 log_level : ERROR
 
 # True/False if you want the resulting csv files and figure to be output to a new folder within the ERP folder
-output_results: False
+output_results: True
