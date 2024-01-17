@@ -371,7 +371,7 @@ class ERP:
 
     def main(self):
         print(self.load_config())
-        # self.read_csv_file()
+        self.read_csv_file()
         print(self.read_raw_data())
         # fig = self.raw.plot_sensors(show_names=True, block=True)
         # cwd = os.getcwd()
