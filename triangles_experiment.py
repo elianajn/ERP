@@ -7,7 +7,6 @@ import yaml
 from screeninfo import get_monitors
 import numpy as np
 import mne
-import pickle
 import matplotlib
 matplotlib.use('QtAgg')
 import matplotlib.pyplot as plt
@@ -29,7 +28,6 @@ class ERP:
         self.log_level = None
         self.output_results = None
         self.file = 'open.txt'
-        # self.file = '7.txt'
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
         self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
         self.params = None
@@ -55,19 +53,9 @@ class ERP:
         # print(type(up_evoked))
 
 
-    def serialize(self, data):
-        """ Serialize the data object so you don't have to keep reading the same file in. 
-        Used during testing/writing 
-        """
-        pickle.dump(data, open('data.p', 'wb'))
-
-    def load_serialized(self):
-        self.raw = pickle.load(open('data.p', 'rb'))
-        print('Raw data loaded from serialized object\n')
-
     def load_config(self):
         """
-        Read parameters from YAML file
+        Read configuration parameters from YAML file
         """
         print('Loading parameters from config.yml...')
         with open('config.yml', 'r') as yamlfile:
@@ -151,7 +139,6 @@ class ERP:
         self.raw.set_montage('standard_1020')
         total = str(datetime.timedelta(seconds=self.raw.n_times / self.sample_rate))
         return 'Input file loaded succesfully\nTotal length of recording: {}\n'.format(total)
-        # self.serialize(self.raw)
     
     def trim_raw_data(self):
         """
