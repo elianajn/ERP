@@ -22,6 +22,14 @@
 - [ ] Github badges?
 - [ ] Update testing
 
+## June To Do
+- [ ] "Up/Down"
+  - [x] refactor names to general
+  - [x] name in YAML file
+  - [ ] variable names?
+- [X] Number of conditions YAML
+- [ ] standardize axis scale
+
 ## **Citations**
 Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
 

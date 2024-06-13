@@ -54,7 +54,7 @@ You need Anaconda downloaded and installed to run this program. Please [download
 2. Start the Conda environment:  
    `$ conda activate ERP_env`
 3. Run the program:  
-  `(ERP_env) $ python triangles_experiment.py`  
+  `(ERP_env) $ python ERP_experiment.py`  
   *Note: You may need to specify that *   <mark>TODO PYTHON3 INSTRUCTIONS</mark>
 
 It may take a moment for the program to start running, especially the first time. After the configurations are loaded, enter your raw data file, ex. ```demo.txt``` and press enter.  

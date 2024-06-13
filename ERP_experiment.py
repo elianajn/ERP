@@ -170,7 +170,7 @@ class ERP:
                 i += 1
         signalFlashes = simulFlashes[mask]
         if len(signalFlashes) != 10:
-            print('Uh Oh! Didn\'t find the signal flahes. Exiting program.') #TODO: actually throw error here!
+            print('Uh Oh! Didn\'t find the signal flashes. Exiting program.') #TODO: actually throw error here!
             sys.exit()
         firstSignal = (signalFlashes[0][0]) / self.sample_rate
         secondSignal = (signalFlashes[-1][0]) / self.sample_rate
@@ -276,7 +276,7 @@ class ERP:
         fig_width = (screen_width // 100) * 100
         fig_height = fig_width // 2
         diff_width, diff_height = (screen_width - fig_width) // 2, (screen_height - fig_height) // 2
-        figsize = (screen_width // 100, screen_width // 200) #TODO: delete?
+        figsize = (screen_width // 100, screen_width // 200) #TODO: delete
         self.fig = plt.figure('Averaged Channels', layout='constrained')
         self.fig.suptitle(self.file.split('.')[0], fontweight='demibold')
         mngr = plt.get_current_fig_manager()
