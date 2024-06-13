@@ -22,4 +22,12 @@ rejection_log_level: ERROR
 log_level : ERROR
 
 # True/False if you want the resulting csv files and figure to be output to a new folder within the ERP folder
-output_results: True
+output_results: False
+
+# The names of the two stimuli cases
+left_flash_condition_name: Up Triangles
+right_flash_condition_name: Down Triangles
+
+# The number of left and right stimuli flashes in your video
+number_of_left_flashes: 30
+number_of_right_flashes: 173

@@ -13,9 +13,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib.table as mtable
 import matplotlib.gridspec as gridspec
-# from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-# import tkinter as tk
-
 import pandas
 
 
@@ -23,34 +20,24 @@ class ERP:
     def __init__(self):
         """
         TODO set log level everywhere
+        STI0 = 
         """
         self.sample_rate = None
         self.log_level = None
         self.output_results = None
-        self.file = 'open.txt'
+        self.file = 'demo.txt'
         self.eeg_channels = ['Fp1', 'Fp2', 'C3', 'C4', 'P7', 'P8', 'O1', 'O2']
         self.locations = {'Fp1': 'Frontal Left', 'Fp2': 'Frontal Right', 'C3': 'Central Left', 'C4': 'Central Right', 'P7': 'Parietal Left', 'P8': 'Parietal Right', 'O1': 'Occipital Left', 'O2': 'Occipital Right'}
         self.params = None
         self.raw = None
-        self.up_events = None
-        self.down_events = None
-        self.up_epochs = None
-        self.down_epochs = None
-        self.epoch_info = {'Expected': [30, 173]}
+        self.left_flash_events = None
+        self.right_flash_events = None
+        self.left_flash_epochs = None
+        self.right_flash_epochs = None
+        self.epoch_info = None
         self.fig = None
         # self.raw.drop_channels(['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Timestamp'])
 
-    def sandbox(self):
-        """
-        Used while developing and debugging; will be removed
-        """
-        up = self.up_epochs.average()
-        # up.plot_joint(show=True, title='Up')
-        self.up_epochs.average().plot_topomap(show=True, times=[-0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7])
-        plt.show()
-        # up_evoked = self.up_epochs.average(self.eeg_channels)
-        # down_evoked = self.down_epochs.average(self.eeg_channels)
-        # print(type(up_evoked))
 
 
     def load_config(self):
@@ -60,7 +47,19 @@ class ERP:
         print('Loading parameters from config.yml...')
         with open('config.yml', 'r') as yamlfile:
             data = yaml.load(yamlfile, Loader=yaml.FullLoader)
-        default = {'sample_rate': 250, 't_min': -0.3, 't_max': 0.7, 'lower_passband_edge': 1.5, 'upper_passband_edge': 8.0, 'epoch_rejection_threshold': 225, 'rejection_log_level': 'ERROR', 'log_level': 'ERROR', 'output_results': True}
+        default = {'sample_rate': 250, 
+                   't_min': -0.3, 
+                   't_max': 0.7, 
+                   'lower_passband_edge': 1.5, 
+                   'upper_passband_edge': 8.0, 
+                   'epoch_rejection_threshold': 225, 
+                   'rejection_log_level': 'ERROR', 
+                   'log_level': 'ERROR', 
+                   'output_results': True,
+                   'left_flash_condition_name': 'Up Triangles',
+                   'right_flash_condition_name': 'Down Triangles',
+                   'number_of_left_flashes': 30,
+                   'number_of_right_flashes': 173}
         if data == default:
             txt = 'Default parameters loaded from configuration file'
             self.params = default
@@ -75,12 +74,16 @@ class ERP:
             '|' + 'Edit these in config.yml'.center(col_width*2 + 1) + '|',
             ''.center(col_width*2 + 3, '-')
         ]
-        units = {'sample_rate': 'Hz', 't_min': 'sec', 't_max': 'sec', 'lower_passband_edge': 'Hz', 'upper_passband_edge': 'Hz', 'epoch_rejection_threshold': 'µV', 'log_level': '', 'rejection_log_level': '', 'output_results': ''}
+        units = {'sample_rate': 'Hz', 't_min': 'sec', 't_max': 'sec', 'lower_passband_edge': 'Hz', 'upper_passband_edge': 'Hz', 'epoch_rejection_threshold': 'µV'}
         try:
             for key in self.params:
+                if key in units:
+                    unit = units[key]
+                else:
+                    unit = ''
                 table.append(
                     '|' + '{}'.format(key.replace('_',' ')).center(col_width) +
-                    '|' + '{} {}'.format(self.params[key], units[key]).center(col_width) + '|'
+                    '|' + '{} {}'.format(self.params[key], unit).center(col_width) + '|'
                 )
         except KeyError as err:
             print(
@@ -95,6 +98,7 @@ class ERP:
         self.rejection_log_level = self.params.pop('rejection_log_level')
         self.log_level = self.params.pop('log_level')
         self.output_results = self.params.pop('output_results')
+        self.epoch_info = {'Expected': [self.params.pop('number_of_left_flashes'), self.params.pop('number_of_right_flashes')]}
         return '\n'.join(table)
 
 
@@ -122,7 +126,6 @@ class ERP:
             csv_path = '{}/{}'.format(cwd, self.file)
             try:
                 data_pd = pandas.read_csv(csv_path, sep=", ", header=4, index_col=False, engine='python', usecols=old_names)
-                # data_pd = pandas.read_csv(csv_path, sep='\t', index_col=False, engine='python', header=0, names=ch_names)
                 break
             except:
                 self.file = input("Unable to open file. Please confirm the name of the OpenBCI text file and reenter: ")
@@ -131,7 +134,6 @@ class ERP:
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=new_names, sfreq=self.sample_rate)
         mne.set_log_level(self.log_level)
-        # info.set_montage(None, on_missing='ignore')
         # info.set_montage('standard_1020')
         self.raw = mne.io.RawArray(data_np, info)
         channel_types = dict.fromkeys(self.eeg_channels, 'eeg')
@@ -148,7 +150,6 @@ class ERP:
         First drop all irrelevant channels to reduce memory usage
         TODO: error if it cannot find both sets of five
         """
-        # self.raw.drop_channels(['Accel X', 'Accel Y', 'Accel Channel Z', '13', 'D11', 'D12', 'D13', 'D17', '18', 'D18', 'Analog Channel 2', 'Marker'])
         AC0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False)
         AC1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False)
         AC0_col0 = AC0[:,0]
@@ -171,9 +172,6 @@ class ERP:
         if len(signalFlashes) != 10:
             print('Uh Oh! Didn\'t find the signal flahes. Exiting program.') #TODO: actually throw error here!
             sys.exit()
-        # lastFirstTime = (signalFlashes[4][0] + 5) / self.sample_rate
-        # firstLastTime = (signalFlashes[5][0] - 5) / self.sample_rate
-        # self.raw.crop(lastFirstTime, firstLastTime)
         firstSignal = (signalFlashes[0][0]) / self.sample_rate
         secondSignal = (signalFlashes[-1][0]) / self.sample_rate
         self.raw.crop(firstSignal, secondSignal)
@@ -191,28 +189,27 @@ class ERP:
         print('Finding stimuli signals...')
         STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, initial_event=True)[5:-5]
         STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, initial_event=True)[5:-5]
-        # STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate)
-        # STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate)
-        self.up_events = min(STI0, STI1, key=len)
-        self.down_events = max(STI0, STI1, key=len)
-        self.epoch_info['Found'] = [len(self.up_events), len(self.down_events)]
-        up_info = 'Up triangles found: {}'.format(len(self.up_events)).ljust(30)
-        down_info = 'Down triangles found: {}'.format(len(self.down_events)).ljust(30)
-        if len(self.up_events) != 30 or len(self.down_events) != 173:
+        # self.left_flash_events = min(STI0, STI1, key=len) Removed 6/13 because changings names from up/down to left/right
+        # self.right_flash_events = max(STI0, STI1, key=len)
+        self.left_flash_events, self.right_flash_events = STI0, STI1
+        self.epoch_info['Found'] = [len(self.left_flash_events), len(self.right_flash_events)]
+        up_info = '{} found: {}'.format(self.params['left_flash_condition_name'], len(self.left_flash_events)).ljust(30)
+        down_info = '{} found: {}'.format(self.params['right_flash_condition_name'], len(self.right_flash_events)).ljust(30)
+        if len(self.left_flash_events) != self.epoch_info['Expected'][0] or len(self.right_flash_events) != self.epoch_info['Expected'][1]:
             print('\nWARNING: Unexpected number of events found. Please ensure that the light sensors are well secured with dark tape')
-            up_info = '\t{}Expected: 30'.format(up_info)
-            down_info = '\t{}Expected: 173'.format(down_info)
+            up_info = '\t{}Expected: {}'.format(up_info, self.epoch_info['Expected'][0])
+            down_info = '\t{}Expected: {}'.format(down_info, self.epoch_info['Expected'][1])
         return '{}\n{}\n'.format(up_info, down_info)
         # return 'Up triangles found: {}{}\nDown triangles found: {}{}\n'.format(len(self.up_events), up_warn, len(self.down_events), down_warn)
 
 
     def find_epochs(self):
         """
-        Isolate the up and down triangle epochs (0.3 seconds before stim signal to 0.7 seconds after)
+        Isolate the epochs (t_mind seconds before stim signal to t_max seconds after)
         TODO may be good to delete the raw data after getting this
         """
-        self.up_epochs = mne.Epochs(raw=self.raw, events=self.up_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
-        self.down_epochs = mne.Epochs(raw=self.raw, events=self.down_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
+        self.left_flash_epochs = mne.Epochs(raw=self.raw, events=self.left_flash_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
+        self.right_flash_epochs = mne.Epochs(raw=self.raw, events=self.right_flash_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         return 'Epochs isolated\n'
 
 
@@ -221,38 +218,39 @@ class ERP:
         Bandpass FIR filter
         """
         self.raw = self.raw.filter(l_freq=self.params['lower_passband_edge'], h_freq=self.params['upper_passband_edge'], picks=self.eeg_channels)
-        # self.raw = self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels, verbose='ERROR')
-        # self.raw.filter(l_freq=self.params['l_freq'], h_freq=self.params['h_freq'], picks=self.eeg_channels)
 
     def artifact_rejection(self):
+        """
+        Use the epoch rejection threshold defined in the config file to drop bad epochs
+        """
         reject_criteria = dict(eeg=self.params['epoch_rejection_threshold'])
-        up, down = self.epoch_info['Found']
+        left, right = self.epoch_info['Found']
         if self.rejection_log_level in ['DEBUG', 'INFO']:
             print('Rejecting bad up epochs')
-            self.up_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
+            self.left_flash_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
             print('\nRejecting bad down epochs')
-            self.down_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
+            self.right_flash_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
             print()
         else:
-            self.up_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
-            self.down_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
-            print('{} / {} up epochs rejected'.format(up - len(self.up_epochs), up))
-            print('{} / {} down epochs rejected\n'.format(down - len(self.down_epochs), down))
-        self.epoch_info['Rejected\nEpochs\n'] = rejUp, rejDown= [up - len(self.up_epochs), down - len(self.down_epochs)]
+            self.left_flash_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
+            self.right_flash_epochs.drop_bad(reject=reject_criteria, verbose=self.rejection_log_level)
+            print('{} / {} of left condition epochs rejected'.format(left - len(self.left_flash_epochs), left))
+            print('{} / {} of right condition epochs rejected\n'.format(right - len(self.right_flash_epochs), right))
+        self.epoch_info['Rejected\nEpochs\n'] = rejLeft, rejRight= [left - len(self.left_flash_epochs), right - len(self.right_flash_epochs)]
         self.epoch_info['Percent\nRejected\n'] = [
-            '{:.2f}%'.format(100 * (rejUp / up)),
-            '{:.2f}%'.format(100 * (rejDown / down))
+            '{:.2f}%'.format(100 * (rejLeft / left)),
+            '{:.2f}%'.format(100 * (rejRight / right))
         ]
 
     def figure_description(self, subfig, colors):
         axs = subfig.subplots(1, 3, sharex=True, sharey=False, width_ratios=[2, 1, 1])
         for ax in axs:
             ax.set_axis_off()
-        up_patch = mpatches.Patch(color=colors['up'], label='Up Triangles')
-        down_patch = mpatches.Patch(color=colors['down'], label='Down Triangles')
-        subfig.legend(handles=[up_patch, down_patch],loc='lower left')
+        left_condition_patch = mpatches.Patch(color=colors['up'], label=self.params['left_flash_condition_name'])
+        right_condition_patch = mpatches.Patch(color=colors['down'], label=self.params['right_flash_condition_name'])
+        subfig.legend(handles=[left_condition_patch, right_condition_patch],loc='lower left')
         triangle_data = pandas.DataFrame(self.epoch_info)
-        axs[1].table(cellText=triangle_data.values, colLabels=triangle_data.columns, rowLabels=['UP', 'DOWN'], rowLoc='right', loc='right', cellLoc='center', edges='open')
+        axs[1].table(cellText=triangle_data.values, colLabels=triangle_data.columns, rowLabels=[self.params['left_flash_condition_name'].upper(), self.params['right_flash_condition_name'].upper()], rowLoc='right', loc='right', cellLoc='center', edges='open')
         params = pandas.DataFrame({'Column 1':[
             '{} Hz'.format(self.params['lower_passband_edge']),
             '{} Hz'.format(self.params['upper_passband_edge']),
@@ -269,8 +267,8 @@ class ERP:
         """
         print('Plotting data...\n')
         evokeds = dict(
-            up=list(self.up_epochs.iter_evoked()),
-            down=list(self.down_epochs.iter_evoked()),
+            up=list(self.left_flash_epochs.iter_evoked()),
+            down=list(self.right_flash_epochs.iter_evoked()),
         )
         colors = {'up': 'tab:orange', 'down': 'tab:blue'}
         primary_monitor = get_monitors()[0]
@@ -305,7 +303,8 @@ class ERP:
 
 
     def dump_data(self):
-        """ Create an output folder and dump the csv and figure into it
+        """ 
+        Create an output folder and dump the csv and figure into it
         If another folder with that name exists this will create a folder with the date and time appended to the folder name
         """
         input_file = self.file.split('.')[0]
@@ -326,7 +325,7 @@ class ERP:
         csv_path = os.path.join(path, csv)
         png_path = os.path.join(path, png)
         dataframe = self.raw.to_data_frame(picks= self.eeg_channels + ['STI0', 'STI1'])
-        dataframe = dataframe.rename(columns={'time':'Time', 'STI0':'Up Stimulus', 'STI1':'Down Stimulus'})
+        dataframe = dataframe.rename(columns={'time':'Time', 'STI0': '{} Stimulus'.format(self.params['left_flash_condition_name']), 'STI1':'{} Stimulus'.format(self.params['right_flash_condition_name'])})
         dataframe.to_csv(csv_path, index=True)
         self.fig.savefig(png_path, facecolor=self.fig.get_facecolor(), bbox_inches='tight', pad_inches=0.2)
         return path
@@ -339,11 +338,11 @@ class ERP:
         # mne.set_log_level('ERROR')
         averages = pandas.DataFrame()
         for channel in self.eeg_channels:
-            up = self.up_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
-            down = self.down_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
-            up.rename(columns={channel : 'Up {}'.format(channel)}, inplace=True)
-            down.rename(columns={channel : 'Down {}'.format(channel)}, inplace=True)
-            ch_avg = pandas.concat([up, down], axis=1)
+            left = self.left_flash_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
+            right = self.right_flash_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
+            left.rename(columns={channel : '{} {}'.format(self.params['left_flash_condition_name'], channel)}, inplace=True)
+            right.rename(columns={channel : '{} {}'.format(self.params['right_flash_condition_name'], channel)}, inplace=True)
+            ch_avg = pandas.concat([left, right], axis=1)
             averages = pandas.concat([averages, ch_avg], axis=1)
         averages.to_csv(os.path.join(path, 'Figure Data.csv'), index=True)
 
@@ -358,20 +357,13 @@ class ERP:
 
     def main(self):
         print(self.load_config())
-        self.read_csv_file()
+        self.read_csv_file() # Comment out to use default file
         print(self.read_raw_data())
-        # fig = self.raw.plot_sensors(show_names=True, block=True)
-        # cwd = os.getcwd()
-        # fig_path = os.path.join(cwd, 'montage.png')
-        # fig.savefig(fig_path)
-        # return
         print(self.trim_raw_data())
-        # self.load_serialized()
         self.filter_raw_data()
         print(self.find_stimuli())
         print(self.find_epochs())
         self.artifact_rejection()
-        # self.sandbox()
         self.plot_data()
         if self.output_results:
             folder = self.dump_data()
