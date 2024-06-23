@@ -9,19 +9,17 @@ This project strives to showcase the formidable capabilities of computational ne
 ## **Table of Contents** <!-- omit in toc -->
 - [**Dependencies**](#dependencies)
 - [**Instructions**](#instructions)
-  - [**1. Downloading the Code**](#1-downloading-the-code)
-  - [**2. Creating the Conda Environment**](#2-creating-the-conda-environment)
-    - [**Mac Instructions**](#mac-instructions)
-    - [**Windows Instructions**](#windows-instructions)
+  - [**Downloading the Code**](#downloading-the-code)
+  - [**Creating the Conda Environment**](#creating-the-conda-environment)
   - [**Running the Program**](#running-the-program)
-  - [**CC Neurophysiology Student Instructions**](#cc-neurophysiology-student-instructions)
+  - [**Configuration File**](#configuration-file)
 - [**EEG Preprocessing**](#eeg-preprocessing)
 - [**Artifact Rejection**](#artifact-rejection)
 - [**References**](#references)
 
 ## **Dependencies**
 - [Anaconda](https://www.anaconda.com/download)
-- Dependencies in Anaconda environment.yml (installation not required)
+- Dependencies in Anaconda `environment.yml` (installation not required)
   - [Python3](https://www.python.org/downloads/)
   - [mne](https://mne.tools/stable/index.html); full citation below
   - [pandas](https://pandas.pydata.org/)
@@ -31,38 +29,50 @@ This project strives to showcase the formidable capabilities of computational ne
 ---
 ## **Instructions**  
 You need Anaconda downloaded and installed to run this program. Please [download](https://www.anaconda.com/download) if you do not have it already before proceeding. 
-### **1. Downloading the Code**  
+### **Downloading the Code**  
 1. Click the green button that says "Code"
 2. Click download zip and extract to a location like your Desktop
   
-### **2. Creating the Conda Environment**  
+### **Creating the Conda Environment**  
 > * The $ before a line which you type into the terminal is not actually typed out in the terminal. This is just to signifiy that the line is to be inputed into the terminal.
-> * You should only need to create the Conda environment once; if you've already created the environment, skip to [Running the Program](#running-the-program)
-#### **Mac Instructions**
-1. Control/right click the ERP folder you just extracted. Hold Option and click "Copy ERP as Pathname"
-2. Open a terminal window
-3. 
+> * **You should only need to create the Conda environment once**; if you've already created the environment, skip to [Running the Program](#running-the-program)
+1. 
+  - Mac (2 options):
+    - Control/right click the ERP folder you just extracted. Hold Option and click "Copy ERP as Pathname." Then, open a terminal window and enter this command:
+      ```bash
+      $ cd <paste pathname you just copied>
+      ```
+    - Right click the ERP folder and select "New Terminal at Folder"
+  - <mark>WINDOWS TO DO</mark>
+  - Linux: you should know how to do this...
+2. Once you're in the folder in a terminal window, enter the command:
     ```bash
-    $ cd <paste pathname you just copied>
     $ conda env create -f environment.yml
     ```
-#### **Windows Instructions**
-<mark>TODO</mark>
 
 ### **Running the Program**  
 1. <mark>TODO: format of the data file, move to it to this folder</mark>
 2. Start the Conda environment:  
-   `$ conda activate ERP_env`
+   ```bash
+   $ conda activate ERP_env
+   ```
 3. Run the program:  
-  `(ERP_env) $ python ERP_experiment.py`  
+  ```bash
+  (ERP_env) $ python ERP_experiment.py
+  ```  
   *Note: You may need to specify that *   <mark>TODO PYTHON3 INSTRUCTIONS</mark>
 
 It may take a moment for the program to start running, especially the first time. After the configurations are loaded, enter your raw data file, ex. ```demo.txt``` and press enter.  
   
-The default configuration is to dump the resulting image and cleaned data into an output folder. You can turn this off in the ```config.yml``` file
+The default configuration is to dump the resulting image and cleaned data into an output folder. You can turn this off in the ```config.yml``` file.
 
-### **CC Neurophysiology Student Instructions**
-<mark>TODO</mark>
+### **Configuration File**  
+You can edit the default configurations by modifying the `config.yml` file. The primary settings you may want to modify are:
+- `sample_rate`: ensure that this matches the sample rate set in OpenBCI
+- `t_min` and `t_max`: the time cutoffs (in seconds) before and after an event which define the length of an epoch
+- `output_results`: set to True or False depending on if you want the results output to a folder each time the program is run
+- `left_flash_condition_name` and `right_flash_condition_name`
+- `number_of_left_flashes` and `number_of_right_flashes`: the number of expected events for each stimuli. It will be okay if these don't match, but it's is helpful when looking at the rejection rate or when modifying the rejection parameters.
 
 ---
 ## **EEG Preprocessing**
