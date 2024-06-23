@@ -31,3 +31,7 @@ right_flash_condition_name: Down Triangles
 # The number of left and right stimuli flashes in your video
 number_of_left_flashes: 30
 number_of_right_flashes: 173
+
+# The length of the video
+# If this doesn't match it's okay, it's just useful when checking that the data has been trimmed correctly
+video_length: 0:03:46.2

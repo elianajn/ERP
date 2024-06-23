@@ -15,6 +15,13 @@ import matplotlib.table as mtable
 import matplotlib.gridspec as gridspec
 import pandas
 
+class SignalFlashesNotFound(Exception):
+    """
+    Exception raised when all 10 signal flashes are not found
+    """
+    def __init__(self, found):
+        self.message = "Raw data could not be trimmed because {} singal flashes were found but 10 were expected".format(found)
+        super().__init__(self.message)
 
 class ERP:
     def __init__(self):
@@ -35,10 +42,9 @@ class ERP:
         self.left_flash_epochs = None
         self.right_flash_epochs = None
         self.epoch_info = None
+        self.video_length = None
         self.fig = None
-        # self.raw.drop_channels(['Sample Index', 'EEG 1', 'EEG 2', 'EEG 3', 'EEG 4', 'EEG 5', 'EEG 6', 'EEG 7', 'EEG 8', 'Timestamp'])
-
-
+        
 
     def load_config(self):
         """
@@ -59,7 +65,8 @@ class ERP:
                    'left_flash_condition_name': 'Up Triangles',
                    'right_flash_condition_name': 'Down Triangles',
                    'number_of_left_flashes': 30,
-                   'number_of_right_flashes': 173}
+                   'number_of_right_flashes': 173,
+                   'video_length': '0:03:46.2'}
         if data == default:
             txt = 'Default parameters loaded from configuration file'
             self.params = default
@@ -85,27 +92,28 @@ class ERP:
                     '|' + '{}'.format(key.replace('_',' ')).center(col_width) +
                     '|' + '{} {}'.format(self.params[key], unit).center(col_width) + '|'
                 )
+            table.append(''.center(col_width*2 + 3, '-'))
+            table.append('')
+            self.sample_rate = self.params.pop('sample_rate')
+            self.rejection_log_level = self.params.pop('rejection_log_level')
+            self.log_level = self.params.pop('log_level')
+            self.output_results = self.params.pop('output_results')
+            self.epoch_info = {'Expected': [self.params.pop('number_of_left_flashes'), self.params.pop('number_of_right_flashes')]}
+            self.video_length = str(datetime.timedelta(seconds=self.params.pop('video_length')))
         except KeyError as err:
             print(
-                '\nUh Oh! The variable name {} is not valid. Please ensure that the variables in config.yml match these names:\n'.format(traceback.format_exception_only(err)[0].split('\'')[1]) +
+                '\nUh Oh! There is an invalid variable name in config.yml. Please ensure that the variables in config.yml match these names:\n' +
                 ('\t{}\n'*len(default)).format(*default.keys()) + 
                 '\nProgram exiting.\n'
             )
             sys.exit()
-        table.append(''.center(col_width*2 + 3, '-'))
-        table.append('')
-        self.sample_rate = self.params.pop('sample_rate')
-        self.rejection_log_level = self.params.pop('rejection_log_level')
-        self.log_level = self.params.pop('log_level')
-        self.output_results = self.params.pop('output_results')
-        self.epoch_info = {'Expected': [self.params.pop('number_of_left_flashes'), self.params.pop('number_of_right_flashes')]}
         return '\n'.join(table)
 
 
     def read_csv_file(self):
         """
         Reads in the name of the Biosemi Data Format file
-        This is isolated from reading the data so IO file input can be disabled during testing
+        This is isolated from reading the data so IO file input can be disabled during developing/testing
         """
         self.file = input("Enter the name of the txt file (ex. demo.txt): ")
 
@@ -142,55 +150,60 @@ class ERP:
         total = str(datetime.timedelta(seconds=self.raw.n_times / self.sample_rate))
         return 'Input file loaded succesfully\nTotal length of recording: {}\n'.format(total)
     
+
     def trim_raw_data(self):
         """
         There are five quick signal flashes at the beginning and end of the video
         Find all 'simultaneous' flashes in the stimulus channels then narrow that down to the 10 true signal flashes
-        Trim the data from the last of the first five to the first of the last five
-        First drop all irrelevant channels to reduce memory usage
-        TODO: error if it cannot find both sets of five
+        Trim the data from the first signal flash to the last signal flashes
+        The data during the signal flashes themselves is not cropped out because it includes time that falls within the first and last epochs
         """
         AC0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False)
         AC1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False)
         AC0_col0 = AC0[:,0]
         AC1_col0 = AC1[:,0]
-        mask = np.isclose(AC0_col0[:,None], AC1_col0, atol=15)
+        mask = np.isclose(AC0_col0[:, None], AC1_col0, atol=15)
         idx, _ = np.where(mask)
         simulFlashes = AC0[idx]
         i = 0
         mask = np.array([], dtype=np.int64)
-        while i < len(simulFlashes)-4:
+        while i < len(simulFlashes) - 4:
             flash = simulFlashes[i][0]
-            fifth = simulFlashes[i+4][0]
+            fifth = simulFlashes[i + 4][0]
             if fifth - flash <= 250:
-                idx = np.array(list(range(i, i+5)))
+                idx = np.array(list(range(i, i + 5)))
                 mask = np.concatenate((mask, idx))
                 i += 5
             else:
                 i += 1
         signalFlashes = simulFlashes[mask]
         if len(signalFlashes) != 10:
-            print('Uh Oh! Didn\'t find the signal flashes. Exiting program.') #TODO: actually throw error here!
-            sys.exit()
+            raise SignalFlashesNotFound(len(signalFlashes))
         firstSignal = (signalFlashes[0][0]) / self.sample_rate
         secondSignal = (signalFlashes[-1][0]) / self.sample_rate
         self.raw.crop(firstSignal, secondSignal)
         seconds = self.raw.n_times / self.sample_rate
         total = str(datetime.timedelta(seconds=seconds))
         justified = 'Length of analyzed data: '.ljust(35)
-        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  0:03:46.2\n'.format(justified, total) #TODO change this if you keep the cropping to include signal flashes
+        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  {}\n'.format(justified, total, self.video_length) #TODO change this if you keep the cropping to include signal flashes
+
+
+    def filter_raw_data(self):
+        """
+        Bandpass FIR filter
+        """
+        self.raw = self.raw.filter(l_freq=self.params['lower_passband_edge'], h_freq=self.params['upper_passband_edge'], picks=self.eeg_channels)
+
 
     def find_stimuli(self):
         """
-        TODO: demo.txt finding extra down!!! - it was at the end
-        Find the events in the two stimuli channels that indicate that a triangle was displayed
-        Zhang, G., Garrett, D. R., & Luck, S. J. Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings. BioRxiv.
+        Find the events in the two stimuli channels. 
+        The first and last 5 stimuli flashes are not included as events, but the data during those 10 flashes is not cropped out
+        because it includes EEG data for the first and last epochs
         """
         print('Finding stimuli signals...')
         STI0 = mne.find_events(self.raw, stim_channel='STI0', consecutive=False, min_duration=1 / self.sample_rate, initial_event=True)[5:-5]
         STI1 = mne.find_events(self.raw, stim_channel='STI1', consecutive=False, min_duration=1 / self.sample_rate, initial_event=True)[5:-5]
-        # self.left_flash_events = min(STI0, STI1, key=len) Removed 6/13 because changings names from up/down to left/right
-        # self.right_flash_events = max(STI0, STI1, key=len)
         self.left_flash_events, self.right_flash_events = STI0, STI1
         self.epoch_info['Found'] = [len(self.left_flash_events), len(self.right_flash_events)]
         up_info = '{} found: {}'.format(self.params['left_flash_condition_name'], len(self.left_flash_events)).ljust(30)
@@ -200,7 +213,6 @@ class ERP:
             up_info = '\t{}Expected: {}'.format(up_info, self.epoch_info['Expected'][0])
             down_info = '\t{}Expected: {}'.format(down_info, self.epoch_info['Expected'][1])
         return '{}\n{}\n'.format(up_info, down_info)
-        # return 'Up triangles found: {}{}\nDown triangles found: {}{}\n'.format(len(self.up_events), up_warn, len(self.down_events), down_warn)
 
 
     def find_epochs(self):
@@ -211,13 +223,7 @@ class ERP:
         self.left_flash_epochs = mne.Epochs(raw=self.raw, events=self.left_flash_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         self.right_flash_epochs = mne.Epochs(raw=self.raw, events=self.right_flash_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         return 'Epochs isolated\n'
-
-
-    def filter_raw_data(self):
-        """
-        Bandpass FIR filter
-        """
-        self.raw = self.raw.filter(l_freq=self.params['lower_passband_edge'], h_freq=self.params['upper_passband_edge'], picks=self.eeg_channels)
+    
 
     def artifact_rejection(self):
         """
@@ -276,7 +282,6 @@ class ERP:
         fig_width = (screen_width // 100) * 100
         fig_height = fig_width // 2
         diff_width, diff_height = (screen_width - fig_width) // 2, (screen_height - fig_height) // 2
-        figsize = (screen_width // 100, screen_width // 200) #TODO: delete
         self.fig = plt.figure('Averaged Channels', layout='constrained')
         self.fig.suptitle(self.file.split('.')[0], fontweight='demibold')
         mngr = plt.get_current_fig_manager()
@@ -335,7 +340,6 @@ class ERP:
         Output the average (either up or down, same as the plotted data) of all all epochs for each channel into to a csv
         Useful for further analysis of average peaks in Excel
         """
-        # mne.set_log_level('ERROR')
         averages = pandas.DataFrame()
         for channel in self.eeg_channels:
             left = self.left_flash_epochs.average(picks=channel).to_data_frame(time_format='ms', index='time')
@@ -345,14 +349,6 @@ class ERP:
             ch_avg = pandas.concat([left, right], axis=1)
             averages = pandas.concat([averages, ch_avg], axis=1)
         averages.to_csv(os.path.join(path, 'Figure Data.csv'), index=True)
-
-    def epoch_drop_fig(self):
-        """
-        TODO: confirm averaging done in dump plotted data doesn't do it in place
-        """
-        fig = plt.figure()
-
-
 
 
     def main(self):
