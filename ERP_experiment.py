@@ -26,8 +26,6 @@ class SignalFlashesNotFound(Exception):
 class ERP:
     def __init__(self):
         """
-        TODO set log level everywhere
-        STI0 = 
         """
         self.sample_rate = None
         self.log_level = None
@@ -142,10 +140,9 @@ class ERP:
         data_np = data_pd.to_numpy().transpose()
         info = mne.create_info(ch_names=new_names, sfreq=self.sample_rate)
         mne.set_log_level(self.log_level)
-        # info.set_montage('standard_1020')
         self.raw = mne.io.RawArray(data_np, info)
         channel_types = dict.fromkeys(self.eeg_channels, 'eeg')
-        self.raw.set_channel_types(channel_types, on_unit_change='ignore') #TODO: make sure weird shit isnt happening
+        self.raw.set_channel_types(channel_types, on_unit_change='ignore')
         self.raw.set_montage('standard_1020')
         total = str(datetime.timedelta(seconds=self.raw.n_times / self.sample_rate))
         return 'Input file loaded succesfully\nTotal length of recording: {}\n'.format(total)
@@ -185,7 +182,7 @@ class ERP:
         seconds = self.raw.n_times / self.sample_rate
         total = str(datetime.timedelta(seconds=seconds))
         justified = 'Length of analyzed data: '.ljust(35)
-        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  {}\n'.format(justified, total, self.video_length) #TODO change this if you keep the cropping to include signal flashes
+        return 'Data trimmed to relevant timeframe.\n{}{}\nExpected length of analyzed data:  {}\n'.format(justified, total, self.video_length) # Change this if you keep the cropping to include signal flashes
 
 
     def filter_raw_data(self):
@@ -218,7 +215,6 @@ class ERP:
     def find_epochs(self):
         """
         Isolate the epochs (t_mind seconds before stim signal to t_max seconds after)
-        TODO may be good to delete the raw data after getting this
         """
         self.left_flash_epochs = mne.Epochs(raw=self.raw, events=self.left_flash_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
         self.right_flash_epochs = mne.Epochs(raw=self.raw, events=self.right_flash_events, picks=self.eeg_channels, tmin=self.params['t_min'], tmax=self.params['t_max'], preload=True)
@@ -288,7 +284,7 @@ class ERP:
         mngr.window.setGeometry(diff_width, 0, fig_width, fig_height) # X, Y, width, height
         txt = 'Close this window to finish running the program.'
         closeText = self.fig.text(x=0.005, y=0.965,s=txt, fontstyle='italic')
-        subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 8], hspace=0.05) #TODO maybe dont want hspace
+        subfigs = self.fig.subfigures(nrows=2, ncols=1, height_ratios=[1, 8], hspace=0.05)
         subfigs[1].get_layout_engine().set(wspace=0.1, hspace=0.1)
         axs = subfigs[1].subplots(2, 4)
         self.figure_description(subfigs[0], colors)
@@ -353,7 +349,7 @@ class ERP:
 
     def main(self):
         print(self.load_config())
-        self.read_csv_file() # Comment out to use default file
+        self.read_csv_file() # Comment out to use without prompting for file (uses demo.txt)
         print(self.read_raw_data())
         print(self.trim_raw_data())
         self.filter_raw_data()

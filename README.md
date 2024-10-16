@@ -2,7 +2,6 @@
 ### ***By Eliana Neurohr*** <!-- omit in toc -->  
 This project strives to showcase the formidable capabilities of computational neuroscience, ensuring accessibility for students, professors, and researchers—even those without prior programming experience.
 
-> ***Note***: *This ReadMe is a work in progress, your patience is appreciated*
 
 ![](share/demo.png)
 <!-- no toc -->
@@ -37,31 +36,29 @@ You need Anaconda downloaded and installed to run this program. Please [download
 > * The $ before a line which you type into the terminal is not actually typed out in the terminal. This is just to signifiy that the line is to be inputed into the terminal.
 > * **You should only need to create the Conda environment once**; if you've already created the environment, skip to [Running the Program](#running-the-program)
 1. 
-  - Mac (2 options):
-    - Control/right click the ERP folder you just extracted. Hold Option and click "Copy ERP as Pathname." Then, open a terminal window and enter this command:
+  - Mac: Control/right click the ERP folder you just extracted. Hold **Option** and click "Copy ERP as Pathname."
+  - Windows: Press **shift** and right click the folder you just extracted, then click "Copy as path".
+  - Linux: you should know how to do this...
+1. Open a terminal window and enter this command:
       ```bash
       $ cd <paste pathname you just copied>
       ```
-    - Right click the ERP folder and select "New Terminal at Folder"
-  - <mark>WINDOWS TO DO</mark>
-  - Linux: you should know how to do this...
 2. Once you're in the folder in a terminal window, enter the command:
     ```bash
     $ conda env create -f environment.yml
     ```
 
 ### **Running the Program**  
-1. <mark>TODO: format of the data file, move to it to this folder</mark>
+1. Make sure the output OpenBCI file is a text (`.txt`) file. Move this to your folder with the program. 
 2. Start the Conda environment:  
-   ```bash
-   $ conda activate ERP_env
-   ```
+    ```bash
+    $ conda activate ERP_env
+    ```
 3. Run the program:  
-  ```bash
-  (ERP_env) $ python ERP_experiment.py
-  ```  
-  *Note: You may need to specify that *   <mark>TODO PYTHON3 INSTRUCTIONS</mark>
-
+    ```bash
+    (ERP_env) $ python ERP_experiment.py
+    ```  
+  
 It may take a moment for the program to start running, especially the first time. After the configurations are loaded, enter your raw data file, ex. ```demo.txt``` and press enter.  
   
 The default configuration is to dump the resulting image and cleaned data into an output folder. You can turn this off in the ```config.yml``` file.
@@ -77,23 +74,26 @@ You can edit the default configurations by modifying the `config.yml` file. The 
 ---
 ## **EEG Preprocessing**
 1. Trim data down to relevant timeframe based on start and end stimuli signals
-2. **FILTERING:** Perform symmetric linear-phase FIR filter using the upper and lower passband edges specified in ```config.yml```
+2. **FILTERING:** Perform symmetric linear-phase FIR filter using the upper and lower passband edges specified in ```config.yml```<sup>1</sup>  
 3. **EPOCH ISOLOATION:** Extract epochs from the continuous data using ```t_min``` and ```t_max``` specified in ```config.yml```
 4. ***ARTIFACT REJECTION:*** Drop bad epochs using the rejection criteria specified in ```config.yml```  
 5. *Since the displayed plot is generated using epochs in order to display the confidence band, epochs are later converted into evoked (averaged epochs) in order to output plotted data to a csv*
 
 
 ## **Artifact Rejection**
-<mark>TODO</mark>  
-Artifacts are parts of the recorded signal that arise from sources other than the source of interest (i.e., neuronal activity in the brain). These can be caused by a variety of factors, such as electromagnetic field noise from nearby elevators or cell phones, instrument/sensor variation or manlfunctions, or natural biological occurences which cause electrical fluctuations in the brain such as heartbeats, blinks, eye movement, or swallowing.<sup>1</sup>  
+Artifacts are parts of the recorded signal that arise from sources other than the source of interest (i.e., neuronal activity in the brain). These can be caused by a variety of factors, such as electromagnetic field noise from nearby elevators or cell phones, instrument/sensor variation or manlfunctions, or natural biological occurences which cause electrical fluctuations in the brain such as heartbeats, blinks, eye movement, or swallowing.<sup>2</sup>  
   
 While artifacts can be rejected or repaired in continous data, it is standard practice in ERP research to reject entire epochs using maximum acceptable peak-to-peak amplitudes. Since different set-ups or hardware will likely be used in repetition of this lab, the reject criteria may require some trial and error and fine tuning in the case of too many/few rejected epochs. This parameter can be modified in ```config.yml```. It may be useful to set the ```rejection_log_level``` to ```DEBUG``` while doing this to see which channels are causing epochs are being rejected.
 
 
 
 ## **References**
-<mark>TODO</mark>  
 Experiment inspired by https://docs.openbci.com/Examples/VideoExperiment/  
 Code inspiration: https://github.com/OpenBCI/OpenBCI_Experiment
 
-<sup>1</sup> [Overview of artifact detection](https://mne.tools/dev/auto_tutorials/preprocessing/10_preprocessing_overview.html)
+<sup>1</sup> Optimal Filters for ERP Research I: A General Approach for Selecting Filter Settings
+Guanghui Zhang, David R. Garrett, Steven J. Luck
+bioRxiv 2023.05.25.542359; doi: https://doi.org/10.1101/2023.05.25.542359  
+
+
+<sup>2</sup> [Overview of artifact detection](https://mne.tools/dev/auto_tutorials/preprocessing/10_preprocessing_overview.html)
